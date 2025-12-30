@@ -29,8 +29,8 @@ try:
     
     # Try to get authenticated user
     me = client.get_me()
-    print(f"✅ Authentication successful!")
+    print(f"Authentication successful!")
     print(f"Logged in as: @{me.data.username}")
     
 except Exception as e:
-    print(f"❌ Authentication failed: {e}")
+    print(f"Authentication failed: {e}")
