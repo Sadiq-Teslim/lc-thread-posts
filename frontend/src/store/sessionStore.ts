@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 interface SessionState {
   sessionId: string | null;
@@ -38,11 +38,11 @@ export const useSessionStore = create<SessionState>()(
         if (!state.sessionId || !state.expiresAt) {
           return false;
         }
-        
+
         // Check if session has expired
         const expiryDate = new Date(state.expiresAt);
         const now = new Date();
-        
+
         if (now >= expiryDate) {
           // Session expired, clear it
           set({
@@ -52,12 +52,12 @@ export const useSessionStore = create<SessionState>()(
           });
           return false;
         }
-        
+
         return true;
       },
     }),
     {
-      name: 'lc-poster-session',
+      name: "lc-poster-session",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         sessionId: state.sessionId,

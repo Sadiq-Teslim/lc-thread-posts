@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Title,
@@ -14,7 +14,7 @@ import {
   Box,
   Skeleton,
   Alert,
-} from '@mantine/core';
+} from "@mantine/core";
 import {
   IconSend,
   IconPlus,
@@ -24,27 +24,28 @@ import {
   IconBrandTwitter,
   IconAlertCircle,
   IconRefresh,
-} from '@tabler/icons-react';
-import { useSessionStore } from '../store/sessionStore';
-import { useProgressStore } from '../store/progressStore';
-import { apiService, getErrorMessage } from '../services/api';
-import { toast } from '../utils/toast';
-import classes from './HomePage.module.css';
+} from "@tabler/icons-react";
+import { useSessionStore } from "../store/sessionStore";
+import { useProgressStore } from "../store/progressStore";
+import { apiService, getErrorMessage } from "../services/api";
+import { toast } from "../utils/toast";
+import classes from "./HomePage.module.css";
 
 export function HomePage() {
   const navigate = useNavigate();
   const { hasValidSession } = useSessionStore();
-  const { currentDay, hasActiveThread, nextDay, setProgress, resetProgress } = useProgressStore();
-  
+  const { currentDay, hasActiveThread, nextDay, setProgress, resetProgress } =
+    useProgressStore();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProgress = async () => {
     if (!hasValidSession()) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiService.getProgress();
       if (response.success && response.data) {
@@ -59,7 +60,7 @@ export function HomePage() {
 
   useEffect(() => {
     fetchProgress();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleResetProgress = async () => {
@@ -68,13 +69,13 @@ export function HomePage() {
       if (response.success) {
         resetProgress();
         toast.success({
-          title: 'Progress Reset',
-          message: 'You can now start a fresh thread!',
+          title: "Progress Reset",
+          message: "You can now start a fresh thread!",
         });
       }
     } catch (err) {
       toast.error({
-        title: 'Reset Failed',
+        title: "Reset Failed",
         message: getErrorMessage(err),
       });
     }
@@ -85,22 +86,27 @@ export function HomePage() {
       <Container size="md" py="xl">
         <Card withBorder p="xl" radius="lg" className={classes.welcomeCard}>
           <Stack align="center" gap="lg">
-            <ThemeIcon size={80} radius="xl" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }}>
+            <ThemeIcon
+              size={80}
+              radius="xl"
+              variant="gradient"
+              gradient={{ from: "blue", to: "cyan" }}
+            >
               <IconBrandTwitter size={40} />
             </ThemeIcon>
             <Title order={2} ta="center">
               Welcome to LC Thread Poster
             </Title>
             <Text c="dimmed" ta="center" maw={400}>
-              Post your daily LeetCode solutions to X/Twitter automatically. 
+              Post your daily LeetCode solutions to X/Twitter automatically.
               Configure your API keys to get started.
             </Text>
             <Button
               size="lg"
               variant="gradient"
-              gradient={{ from: 'blue', to: 'cyan' }}
+              gradient={{ from: "blue", to: "cyan" }}
               leftSection={<IconSettings size={20} />}
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate("/settings")}
             >
               Configure API Keys
             </Button>
@@ -118,9 +124,7 @@ export function HomePage() {
           <Title order={1} mb="xs">
             Dashboard
           </Title>
-          <Text c="dimmed">
-            Manage your LeetCode posting journey
-          </Text>
+          <Text c="dimmed">Manage your LeetCode posting journey</Text>
         </Box>
 
         {/* Error Alert */}
@@ -161,10 +165,12 @@ export function HomePage() {
                   </ThemeIcon>
                 </Group>
                 <Text size="xl" fw={700} className={classes.statValue}>
-                  {hasActiveThread ? currentDay : '—'}
+                  {hasActiveThread ? currentDay : "—"}
                 </Text>
                 <Text size="xs" c="dimmed" mt="xs">
-                  {hasActiveThread ? 'Days of consistent posting' : 'Start a thread to begin'}
+                  {hasActiveThread
+                    ? "Days of consistent posting"
+                    : "Start a thread to begin"}
                 </Text>
               </>
             )}
@@ -208,16 +214,16 @@ export function HomePage() {
                   variant="gradient"
                   gradient={
                     hasActiveThread
-                      ? { from: 'green', to: 'teal' }
-                      : { from: 'gray', to: 'gray' }
+                      ? { from: "green", to: "teal" }
+                      : { from: "gray", to: "gray" }
                   }
                 >
-                  {hasActiveThread ? 'Active' : 'No Thread'}
+                  {hasActiveThread ? "Active" : "No Thread"}
                 </Badge>
                 <Text size="xs" c="dimmed" mt="xs">
                   {hasActiveThread
-                    ? 'Your thread is ready for updates'
-                    : 'Create a thread to start posting'}
+                    ? "Your thread is ready for updates"
+                    : "Create a thread to start posting"}
                 </Text>
               </>
             )}
@@ -237,16 +243,17 @@ export function HomePage() {
               className={classes.actionCard}
               onClick={() => {
                 if (hasActiveThread) {
-                  navigate('/post');
+                  navigate("/post");
                 } else {
                   toast.info({
-                    title: 'No Active Thread',
-                    message: 'Please start a thread first before posting solutions.',
+                    title: "No Active Thread",
+                    message:
+                      "Please start a thread first before posting solutions.",
                   });
                 }
               }}
-              style={{ 
-                cursor: hasActiveThread ? 'pointer' : 'not-allowed',
+              style={{
+                cursor: hasActiveThread ? "pointer" : "not-allowed",
                 opacity: hasActiveThread ? 1 : 0.7,
               }}
             >
@@ -255,7 +262,7 @@ export function HomePage() {
                   size={50}
                   radius="md"
                   variant="gradient"
-                  gradient={{ from: 'blue', to: 'cyan' }}
+                  gradient={{ from: "blue", to: "cyan" }}
                 >
                   <IconSend size={26} />
                 </ThemeIcon>
@@ -280,26 +287,26 @@ export function HomePage() {
               p="xl"
               radius="lg"
               className={classes.actionCard}
-              onClick={() => navigate('/start-thread')}
-              style={{ cursor: 'pointer' }}
+              onClick={() => navigate("/start-thread")}
+              style={{ cursor: "pointer" }}
             >
               <Group>
                 <ThemeIcon
                   size={50}
                   radius="md"
                   variant="gradient"
-                  gradient={{ from: 'grape', to: 'pink' }}
+                  gradient={{ from: "grape", to: "pink" }}
                 >
                   <IconPlus size={26} />
                 </ThemeIcon>
                 <Box>
                   <Text fw={600} size="lg">
-                    {hasActiveThread ? 'Start New Thread' : 'Start Thread'}
+                    {hasActiveThread ? "Start New Thread" : "Start Thread"}
                   </Text>
                   <Text size="sm" c="dimmed">
                     {hasActiveThread
-                      ? 'Reset and begin a fresh journey'
-                      : 'Begin your LeetCode posting journey'}
+                      ? "Reset and begin a fresh journey"
+                      : "Begin your LeetCode posting journey"}
                   </Text>
                 </Box>
               </Group>

@@ -1,7 +1,7 @@
-import { Navigate } from 'react-router-dom';
-import { useSessionStore } from '../../store/sessionStore';
-import { toast } from '../../utils/toast';
-import { useEffect, useRef } from 'react';
+import { Navigate } from "react-router-dom";
+import { useSessionStore } from "../../store/sessionStore";
+import { toast } from "../../utils/toast";
+import { useEffect, useRef } from "react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,8 +15,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (!hasValidSession() && !hasShownToast.current) {
       hasShownToast.current = true;
       toast.warning({
-        title: 'Configuration Required',
-        message: 'Please configure your X/Twitter API keys before using this feature.',
+        title: "Configuration Required",
+        message:
+          "Please configure your X/Twitter API keys before using this feature.",
       });
     }
   }, [hasValidSession]);

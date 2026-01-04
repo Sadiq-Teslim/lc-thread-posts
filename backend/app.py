@@ -19,16 +19,20 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 # Configuration
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
-PROGRESS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'progress.json')
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
+PROGRESS_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "progress.json"
+)
 
 # In-memory session storage (in production, use Redis or database)
 active_sessions = {}
+
 
 def generate_encryption_key(session_id: str) -> bytes:
     """Generate a Fernet encryption key from session ID"""
     key = hashlib.sha256(session_id.encode()).digest()
     return base64.urlsafe_b64encode(key)
+
 
 def encrypt_credentials(credentials: dict, session_id: str) -> str:
     """Encrypt credentials for secure storage"""
@@ -36,149 +40,192 @@ def encrypt_credentials(credentials: dict, session_id: str) -> str:
     f = Fernet(key)
     return f.encrypt(json.dumps(credentials).encode()).decode()
 
+
 def decrypt_credentials(encrypted_data: str, session_id: str) -> dict:
     """Decrypt credentials"""
     key = generate_encryption_key(session_id)
     f = Fernet(key)
     return json.loads(f.decrypt(encrypted_data.encode()).decode())
 
+
 def get_session_id():
     """Get session ID from request header"""
-    return request.headers.get('X-Session-ID')
+    return request.headers.get("X-Session-ID")
+
 
 def require_credentials(f):
     """Decorator to require valid credentials for API endpoints"""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         session_id = get_session_id()
-        
+
         if not session_id:
-            return jsonify({
-                'success': False,
-                'error_code': 'NO_SESSION',
-                'message': 'Please configure your settings first to start using the app.'
-            }), 401
-        
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "NO_SESSION",
+                        "message": "Please configure your settings first to start using the app.",
+                    }
+                ),
+                401,
+            )
+
         if session_id not in active_sessions:
-            return jsonify({
-                'success': False,
-                'error_code': 'SESSION_EXPIRED',
-                'message': 'Your session has expired. Please reconfigure your API keys.'
-            }), 401
-        
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "SESSION_EXPIRED",
+                        "message": "Your session has expired. Please reconfigure your API keys.",
+                    }
+                ),
+                401,
+            )
+
         session = active_sessions[session_id]
-        
+
         # Check session expiry (24 hours)
-        if datetime.now() > session['expires_at']:
+        if datetime.now() > session["expires_at"]:
             del active_sessions[session_id]
-            return jsonify({
-                'success': False,
-                'error_code': 'SESSION_EXPIRED',
-                'message': 'Your session has expired. Please reconfigure your API keys.'
-            }), 401
-        
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "SESSION_EXPIRED",
+                        "message": "Your session has expired. Please reconfigure your API keys.",
+                    }
+                ),
+                401,
+            )
+
         try:
-            credentials = decrypt_credentials(session['encrypted_credentials'], session_id)
+            credentials = decrypt_credentials(
+                session["encrypted_credentials"], session_id
+            )
             request.twitter_credentials = credentials
         except Exception:
-            return jsonify({
-                'success': False,
-                'error_code': 'INVALID_CREDENTIALS',
-                'message': 'Unable to decrypt your credentials. Please reconfigure your API keys.'
-            }), 401
-        
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "INVALID_CREDENTIALS",
+                        "message": "Unable to decrypt your credentials. Please reconfigure your API keys.",
+                    }
+                ),
+                401,
+            )
+
         return f(*args, **kwargs)
+
     return decorated_function
+
 
 def get_twitter_client(credentials: dict):
     """Create Twitter client with provided credentials"""
     return tweepy.Client(
-        bearer_token=credentials.get('bearer_token'),
-        consumer_key=credentials.get('api_key'),
-        consumer_secret=credentials.get('api_secret'),
-        access_token=credentials.get('access_token'),
-        access_token_secret=credentials.get('access_token_secret')
+        bearer_token=credentials.get("bearer_token"),
+        consumer_key=credentials.get("api_key"),
+        consumer_secret=credentials.get("api_secret"),
+        access_token=credentials.get("access_token"),
+        access_token_secret=credentials.get("access_token_secret"),
     )
+
 
 def load_progress():
     """Load progress from JSON file"""
     try:
-        with open(PROGRESS_FILE, 'r') as f:
+        with open(PROGRESS_FILE, "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return {"day": 0, "thread_id": None}
 
+
 def save_progress(day: int, thread_id: str):
     """Save progress to JSON file"""
-    with open(PROGRESS_FILE, 'w') as f:
+    with open(PROGRESS_FILE, "w") as f:
         json.dump({"day": day, "thread_id": thread_id}, f, indent=2)
+
 
 def friendly_error_message(error: Exception) -> tuple:
     """Convert technical errors to user-friendly messages"""
     error_str = str(error).lower()
-    
-    if 'unauthorized' in error_str or '401' in error_str:
+
+    if "unauthorized" in error_str or "401" in error_str:
         return (
-            'AUTHENTICATION_FAILED',
-            'Your X/Twitter API credentials appear to be invalid. Please check your API keys in settings.'
+            "AUTHENTICATION_FAILED",
+            "Your X/Twitter API credentials appear to be invalid. Please check your API keys in settings.",
         )
-    elif 'forbidden' in error_str or '403' in error_str:
+    elif "forbidden" in error_str or "403" in error_str:
         return (
-            'PERMISSION_DENIED',
-            'Your X/Twitter account does not have permission for this action. Please check your app permissions on the Twitter Developer Portal.'
+            "PERMISSION_DENIED",
+            "Your X/Twitter account does not have permission for this action. Please check your app permissions on the Twitter Developer Portal.",
         )
-    elif 'rate limit' in error_str or '429' in error_str:
+    elif "rate limit" in error_str or "429" in error_str:
         return (
-            'RATE_LIMITED',
-            'You\'ve hit the X/Twitter rate limit. Please wait a few minutes before trying again.'
+            "RATE_LIMITED",
+            "You've hit the X/Twitter rate limit. Please wait a few minutes before trying again.",
         )
-    elif 'duplicate' in error_str:
+    elif "duplicate" in error_str:
         return (
-            'DUPLICATE_TWEET',
-            'This tweet appears to be a duplicate. Please modify your content and try again.'
+            "DUPLICATE_TWEET",
+            "This tweet appears to be a duplicate. Please modify your content and try again.",
         )
-    elif 'too long' in error_str or 'character' in error_str:
+    elif "too long" in error_str or "character" in error_str:
         return (
-            'TWEET_TOO_LONG',
-            'Your tweet is too long. Please shorten it to 280 characters or less.'
+            "TWEET_TOO_LONG",
+            "Your tweet is too long. Please shorten it to 280 characters or less.",
         )
-    elif 'connection' in error_str or 'timeout' in error_str:
+    elif "connection" in error_str or "timeout" in error_str:
         return (
-            'CONNECTION_ERROR',
-            'Unable to connect to X/Twitter. Please check your internet connection and try again.'
+            "CONNECTION_ERROR",
+            "Unable to connect to X/Twitter. Please check your internet connection and try again.",
         )
     else:
         return (
-            'UNKNOWN_ERROR',
-            'Something went wrong while posting. Please try again or check your settings.'
+            "UNKNOWN_ERROR",
+            "Something went wrong while posting. Please try again or check your settings.",
         )
+
 
 # ============== API ENDPOINTS ==============
 
-@app.route('/api/health', methods=['GET'])
+
+@app.route("/api/health", methods=["GET"])
 def health_check():
     """Health check endpoint"""
-    return jsonify({
-        'success': True,
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
-    })
+    return jsonify(
+        {"success": True, "status": "healthy", "timestamp": datetime.now().isoformat()}
+    )
 
-@app.route('/api/session/create', methods=['POST'])
+
+@app.route("/api/session/create", methods=["POST"])
 def create_session():
     """Create a new session and store encrypted credentials"""
     data = request.get_json()
-    
-    required_fields = ['api_key', 'api_secret', 'access_token', 'access_token_secret', 'bearer_token']
+
+    required_fields = [
+        "api_key",
+        "api_secret",
+        "access_token",
+        "access_token_secret",
+        "bearer_token",
+    ]
     missing_fields = [f for f in required_fields if not data.get(f)]
-    
+
     if missing_fields:
-        return jsonify({
-            'success': False,
-            'error_code': 'MISSING_CREDENTIALS',
-            'message': f'Please provide all required API keys. Missing: {", ".join(missing_fields)}'
-        }), 400
-    
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "MISSING_CREDENTIALS",
+                    "message": f'Please provide all required API keys. Missing: {", ".join(missing_fields)}',
+                }
+            ),
+            400,
+        )
+
     # Validate credentials by attempting to connect
     try:
         client = get_twitter_client(data)
@@ -186,287 +233,354 @@ def create_session():
         client.get_me()
     except Exception as e:
         error_code, message = friendly_error_message(e)
-        return jsonify({
-            'success': False,
-            'error_code': error_code,
-            'message': message
-        }), 400
-    
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            400,
+        )
+
     # Generate session ID
     session_id = secrets.token_urlsafe(32)
-    
+
     # Encrypt and store credentials
     encrypted_creds = encrypt_credentials(data, session_id)
-    
-    active_sessions[session_id] = {
-        'encrypted_credentials': encrypted_creds,
-        'created_at': datetime.now(),
-        'expires_at': datetime.now() + timedelta(hours=24)
-    }
-    
-    return jsonify({
-        'success': True,
-        'session_id': session_id,
-        'message': 'Successfully connected to X/Twitter! You can now start posting.',
-        'expires_in': 86400  # 24 hours in seconds
-    })
 
-@app.route('/api/session/validate', methods=['GET'])
+    active_sessions[session_id] = {
+        "encrypted_credentials": encrypted_creds,
+        "created_at": datetime.now(),
+        "expires_at": datetime.now() + timedelta(hours=24),
+    }
+
+    return jsonify(
+        {
+            "success": True,
+            "session_id": session_id,
+            "message": "Successfully connected to X/Twitter! You can now start posting.",
+            "expires_in": 86400,  # 24 hours in seconds
+        }
+    )
+
+
+@app.route("/api/session/validate", methods=["GET"])
 def validate_session():
     """Validate if current session is still active"""
     session_id = get_session_id()
-    
-    if not session_id or session_id not in active_sessions:
-        return jsonify({
-            'success': False,
-            'valid': False,
-            'message': 'No active session found. Please configure your API keys.'
-        })
-    
-    session = active_sessions[session_id]
-    
-    if datetime.now() > session['expires_at']:
-        del active_sessions[session_id]
-        return jsonify({
-            'success': False,
-            'valid': False,
-            'message': 'Your session has expired. Please reconfigure your API keys.'
-        })
-    
-    return jsonify({
-        'success': True,
-        'valid': True,
-        'expires_at': session['expires_at'].isoformat(),
-        'message': 'Session is active.'
-    })
 
-@app.route('/api/session/destroy', methods=['DELETE'])
+    if not session_id or session_id not in active_sessions:
+        return jsonify(
+            {
+                "success": False,
+                "valid": False,
+                "message": "No active session found. Please configure your API keys.",
+            }
+        )
+
+    session = active_sessions[session_id]
+
+    if datetime.now() > session["expires_at"]:
+        del active_sessions[session_id]
+        return jsonify(
+            {
+                "success": False,
+                "valid": False,
+                "message": "Your session has expired. Please reconfigure your API keys.",
+            }
+        )
+
+    return jsonify(
+        {
+            "success": True,
+            "valid": True,
+            "expires_at": session["expires_at"].isoformat(),
+            "message": "Session is active.",
+        }
+    )
+
+
+@app.route("/api/session/destroy", methods=["DELETE"])
 def destroy_session():
     """Destroy current session (logout)"""
     session_id = get_session_id()
-    
+
     if session_id and session_id in active_sessions:
         del active_sessions[session_id]
-    
-    return jsonify({
-        'success': True,
-        'message': 'Session ended. Your credentials have been securely removed.'
-    })
 
-@app.route('/api/progress', methods=['GET'])
+    return jsonify(
+        {
+            "success": True,
+            "message": "Session ended. Your credentials have been securely removed.",
+        }
+    )
+
+
+@app.route("/api/progress", methods=["GET"])
 @require_credentials
 def get_progress():
     """Get current posting progress"""
     progress = load_progress()
-    return jsonify({
-        'success': True,
-        'data': {
-            'current_day': progress.get('day', 0),
-            'thread_id': progress.get('thread_id'),
-            'has_active_thread': progress.get('thread_id') is not None,
-            'next_day': progress.get('day', 0) + 1
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "current_day": progress.get("day", 0),
+                "thread_id": progress.get("thread_id"),
+                "has_active_thread": progress.get("thread_id") is not None,
+                "next_day": progress.get("day", 0) + 1,
+            },
         }
-    })
+    )
 
-@app.route('/api/progress/reset', methods=['POST'])
+
+@app.route("/api/progress/reset", methods=["POST"])
 @require_credentials
 def reset_progress():
     """Reset progress to start a new thread"""
     save_progress(0, None)
-    return jsonify({
-        'success': True,
-        'message': 'Progress has been reset. You can now start a new thread.'
-    })
+    return jsonify(
+        {
+            "success": True,
+            "message": "Progress has been reset. You can now start a new thread.",
+        }
+    )
 
-@app.route('/api/thread/start', methods=['POST'])
+
+@app.route("/api/thread/start", methods=["POST"])
 @require_credentials
 def start_thread():
     """Start a new thread with introduction tweet"""
     data = request.get_json()
-    intro_text = data.get('intro_text', '').strip()
-    
+    intro_text = data.get("intro_text", "").strip()
+
     if not intro_text:
-        return jsonify({
-            'success': False,
-            'error_code': 'EMPTY_CONTENT',
-            'message': 'Please enter some text for your thread introduction.'
-        }), 400
-    
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "EMPTY_CONTENT",
+                    "message": "Please enter some text for your thread introduction.",
+                }
+            ),
+            400,
+        )
+
     if len(intro_text) > 280:
-        return jsonify({
-            'success': False,
-            'error_code': 'TWEET_TOO_LONG',
-            'message': f'Your introduction is {len(intro_text)} characters. Please keep it under 280 characters.'
-        }), 400
-    
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "TWEET_TOO_LONG",
+                    "message": f"Your introduction is {len(intro_text)} characters. Please keep it under 280 characters.",
+                }
+            ),
+            400,
+        )
+
     try:
         client = get_twitter_client(request.twitter_credentials)
-        
-        response = client.create_tweet(
-            text=intro_text,
-            reply_settings="mentionedUsers"
-        )
-        
-        thread_id = response.data['id']
+
+        response = client.create_tweet(text=intro_text, reply_settings="mentionedUsers")
+
+        thread_id = response.data["id"]
         save_progress(0, thread_id)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Thread started successfully! You can now post Day 1.',
-            'data': {
-                'thread_id': thread_id,
-                'tweet_url': f'https://x.com/user/status/{thread_id}'
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Thread started successfully! You can now post Day 1.",
+                "data": {
+                    "thread_id": thread_id,
+                    "tweet_url": f"https://x.com/user/status/{thread_id}",
+                },
             }
-        })
-        
+        )
+
     except Exception as e:
         error_code, message = friendly_error_message(e)
-        return jsonify({
-            'success': False,
-            'error_code': error_code,
-            'message': message
-        }), 500
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
 
-@app.route('/api/solution/post', methods=['POST'])
+
+@app.route("/api/solution/post", methods=["POST"])
 @require_credentials
 def post_solution():
     """Post a LeetCode solution to the thread"""
     data = request.get_json()
-    gist_url = data.get('gist_url', '').strip()
-    problem_name = data.get('problem_name', '').strip()
-    
+    gist_url = data.get("gist_url", "").strip()
+    problem_name = data.get("problem_name", "").strip()
+
     if not gist_url:
-        return jsonify({
-            'success': False,
-            'error_code': 'MISSING_GIST_URL',
-            'message': 'Please provide a Gist URL for your solution.'
-        }), 400
-    
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "MISSING_GIST_URL",
+                    "message": "Please provide a Gist URL for your solution.",
+                }
+            ),
+            400,
+        )
+
     if not problem_name:
-        return jsonify({
-            'success': False,
-            'error_code': 'MISSING_PROBLEM_NAME',
-            'message': 'Please provide the problem name.'
-        }), 400
-    
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "MISSING_PROBLEM_NAME",
+                    "message": "Please provide the problem name.",
+                }
+            ),
+            400,
+        )
+
     progress = load_progress()
-    thread_id = progress.get('thread_id')
-    
+    thread_id = progress.get("thread_id")
+
     if not thread_id:
-        return jsonify({
-            'success': False,
-            'error_code': 'NO_THREAD',
-            'message': 'No active thread found. Please start a new thread first.'
-        }), 400
-    
-    day = progress.get('day', 0) + 1
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "NO_THREAD",
+                    "message": "No active thread found. Please start a new thread first.",
+                }
+            ),
+            400,
+        )
+
+    day = progress.get("day", 0) + 1
     tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
-    
+
     if len(tweet_text) > 280:
-        return jsonify({
-            'success': False,
-            'error_code': 'TWEET_TOO_LONG',
-            'message': f'Your tweet is {len(tweet_text)} characters. Please shorten the problem name.'
-        }), 400
-    
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "TWEET_TOO_LONG",
+                    "message": f"Your tweet is {len(tweet_text)} characters. Please shorten the problem name.",
+                }
+            ),
+            400,
+        )
+
     try:
         client = get_twitter_client(request.twitter_credentials)
-        
-        response = client.create_tweet(
-            text=tweet_text,
-            in_reply_to_tweet_id=thread_id
-        )
-        
+
+        response = client.create_tweet(text=tweet_text, in_reply_to_tweet_id=thread_id)
+
         save_progress(day, thread_id)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Day {day} posted successfully!',
-            'data': {
-                'day': day,
-                'tweet_id': response.data['id'],
-                'tweet_url': f'https://x.com/user/status/{response.data["id"]}',
-                'tweet_text': tweet_text
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Day {day} posted successfully!",
+                "data": {
+                    "day": day,
+                    "tweet_id": response.data["id"],
+                    "tweet_url": f'https://x.com/user/status/{response.data["id"]}',
+                    "tweet_text": tweet_text,
+                },
             }
-        })
-        
+        )
+
     except Exception as e:
         error_code, message = friendly_error_message(e)
-        return jsonify({
-            'success': False,
-            'error_code': error_code,
-            'message': message
-        }), 500
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
 
-@app.route('/api/tweet/preview', methods=['POST'])
+
+@app.route("/api/tweet/preview", methods=["POST"])
 @require_credentials
 def preview_tweet():
     """Preview what the tweet will look like"""
     data = request.get_json()
-    gist_url = data.get('gist_url', '').strip()
-    problem_name = data.get('problem_name', '').strip()
-    
-    progress = load_progress()
-    day = progress.get('day', 0) + 1
-    
-    tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
-    
-    return jsonify({
-        'success': True,
-        'data': {
-            'preview': tweet_text,
-            'character_count': len(tweet_text),
-            'is_valid': len(tweet_text) <= 280,
-            'day': day
-        }
-    })
+    gist_url = data.get("gist_url", "").strip()
+    problem_name = data.get("problem_name", "").strip()
 
-@app.route('/api/user/info', methods=['GET'])
+    progress = load_progress()
+    day = progress.get("day", 0) + 1
+
+    tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
+
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "preview": tweet_text,
+                "character_count": len(tweet_text),
+                "is_valid": len(tweet_text) <= 280,
+                "day": day,
+            },
+        }
+    )
+
+
+@app.route("/api/user/info", methods=["GET"])
 @require_credentials
 def get_user_info():
     """Get authenticated user info"""
     try:
         client = get_twitter_client(request.twitter_credentials)
-        user = client.get_me(user_fields=['profile_image_url', 'username', 'name'])
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'id': user.data.id,
-                'username': user.data.username,
-                'name': user.data.name,
-                'profile_image_url': user.data.profile_image_url if hasattr(user.data, 'profile_image_url') else None
+        user = client.get_me(user_fields=["profile_image_url", "username", "name"])
+
+        return jsonify(
+            {
+                "success": True,
+                "data": {
+                    "id": user.data.id,
+                    "username": user.data.username,
+                    "name": user.data.name,
+                    "profile_image_url": (
+                        user.data.profile_image_url
+                        if hasattr(user.data, "profile_image_url")
+                        else None
+                    ),
+                },
             }
-        })
-        
+        )
+
     except Exception as e:
         error_code, message = friendly_error_message(e)
-        return jsonify({
-            'success': False,
-            'error_code': error_code,
-            'message': message
-        }), 500
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
+
 
 # Error handlers
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({
-        'success': False,
-        'error_code': 'NOT_FOUND',
-        'message': 'The requested resource was not found.'
-    }), 404
+    return (
+        jsonify(
+            {
+                "success": False,
+                "error_code": "NOT_FOUND",
+                "message": "The requested resource was not found.",
+            }
+        ),
+        404,
+    )
+
 
 @app.errorhandler(500)
 def server_error(e):
-    return jsonify({
-        'success': False,
-        'error_code': 'SERVER_ERROR',
-        'message': 'An unexpected error occurred. Please try again later.'
-    }), 500
+    return (
+        jsonify(
+            {
+                "success": False,
+                "error_code": "SERVER_ERROR",
+                "message": "An unexpected error occurred. Please try again later.",
+            }
+        ),
+        500,
+    )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("=" * 50)
     print("LeetCode Thread Poster API Server")
     print("=" * 50)
     print("Starting server on http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)

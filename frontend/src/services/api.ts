@@ -1,12 +1,12 @@
-import axios, { AxiosError } from 'axios';
-import { useSessionStore } from '../store/sessionStore';
+import axios, { AxiosError } from "axios";
+import { useSessionStore } from "../store/sessionStore";
 
 // Create axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: "/api",
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -15,7 +15,7 @@ api.interceptors.request.use(
   (config) => {
     const sessionId = useSessionStore.getState().sessionId;
     if (sessionId) {
-      config.headers['X-Session-ID'] = sessionId;
+      config.headers["X-Session-ID"] = sessionId;
     }
     return config;
   },
@@ -29,7 +29,7 @@ api.interceptors.response.use(
     // Handle session expiration
     if (error.response?.status === 401) {
       const errorCode = error.response.data?.error_code;
-      if (errorCode === 'SESSION_EXPIRED' || errorCode === 'NO_SESSION') {
+      if (errorCode === "SESSION_EXPIRED" || errorCode === "NO_SESSION") {
         useSessionStore.getState().clearSession();
       }
     }
@@ -100,7 +100,7 @@ export const apiService = {
   // Health check
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await api.get('/health');
+      const response = await api.get("/health");
       return response.data.success;
     } catch {
       return false;
@@ -108,60 +108,76 @@ export const apiService = {
   },
 
   // Session management
-  async createSession(credentials: CredentialsPayload): Promise<SessionResponse> {
-    const response = await api.post<SessionResponse>('/session/create', credentials);
+  async createSession(
+    credentials: CredentialsPayload
+  ): Promise<SessionResponse> {
+    const response = await api.post<SessionResponse>(
+      "/session/create",
+      credentials
+    );
     return response.data;
   },
 
-  async validateSession(): Promise<ApiResponse<{ valid: boolean; expires_at: string }>> {
-    const response = await api.get('/session/validate');
+  async validateSession(): Promise<
+    ApiResponse<{ valid: boolean; expires_at: string }>
+  > {
+    const response = await api.get("/session/validate");
     return response.data;
   },
 
   async destroySession(): Promise<ApiResponse> {
-    const response = await api.delete('/session/destroy');
+    const response = await api.delete("/session/destroy");
     return response.data;
   },
 
   // Progress
   async getProgress(): Promise<ApiResponse<ProgressData>> {
-    const response = await api.get<ApiResponse<ProgressData>>('/progress');
+    const response = await api.get<ApiResponse<ProgressData>>("/progress");
     return response.data;
   },
 
   async resetProgress(): Promise<ApiResponse> {
-    const response = await api.post('/progress/reset');
+    const response = await api.post("/progress/reset");
     return response.data;
   },
 
   // Thread management
   async startThread(introText: string): Promise<ApiResponse<TweetData>> {
-    const response = await api.post<ApiResponse<TweetData>>('/thread/start', {
+    const response = await api.post<ApiResponse<TweetData>>("/thread/start", {
       intro_text: introText,
     });
     return response.data;
   },
 
   // Solution posting
-  async postSolution(gistUrl: string, problemName: string): Promise<ApiResponse<TweetData>> {
-    const response = await api.post<ApiResponse<TweetData>>('/solution/post', {
+  async postSolution(
+    gistUrl: string,
+    problemName: string
+  ): Promise<ApiResponse<TweetData>> {
+    const response = await api.post<ApiResponse<TweetData>>("/solution/post", {
       gist_url: gistUrl,
       problem_name: problemName,
     });
     return response.data;
   },
 
-  async previewTweet(gistUrl: string, problemName: string): Promise<ApiResponse<PreviewData>> {
-    const response = await api.post<ApiResponse<PreviewData>>('/tweet/preview', {
-      gist_url: gistUrl,
-      problem_name: problemName,
-    });
+  async previewTweet(
+    gistUrl: string,
+    problemName: string
+  ): Promise<ApiResponse<PreviewData>> {
+    const response = await api.post<ApiResponse<PreviewData>>(
+      "/tweet/preview",
+      {
+        gist_url: gistUrl,
+        problem_name: problemName,
+      }
+    );
     return response.data;
   },
 
   // User info
   async getUserInfo(): Promise<ApiResponse<UserInfo>> {
-    const response = await api.get<ApiResponse<UserInfo>>('/user/info');
+    const response = await api.get<ApiResponse<UserInfo>>("/user/info");
     return response.data;
   },
 };
@@ -170,42 +186,42 @@ export const apiService = {
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
-    
+
     if (axiosError.response?.data?.message) {
       return axiosError.response.data.message;
     }
-    
-    if (axiosError.code === 'ECONNABORTED') {
-      return 'The request timed out. Please check your internet connection and try again.';
+
+    if (axiosError.code === "ECONNABORTED") {
+      return "The request timed out. Please check your internet connection and try again.";
     }
-    
-    if (axiosError.code === 'ERR_NETWORK') {
-      return 'Unable to connect to the server. Please make sure the backend is running.';
+
+    if (axiosError.code === "ERR_NETWORK") {
+      return "Unable to connect to the server. Please make sure the backend is running.";
     }
-    
+
     switch (axiosError.response?.status) {
       case 400:
-        return 'Please check your input and try again.';
+        return "Please check your input and try again.";
       case 401:
-        return 'Your session has expired. Please reconfigure your API keys.';
+        return "Your session has expired. Please reconfigure your API keys.";
       case 403:
-        return 'You don\'t have permission to perform this action.';
+        return "You don't have permission to perform this action.";
       case 404:
-        return 'The requested resource was not found.';
+        return "The requested resource was not found.";
       case 429:
-        return 'Too many requests. Please wait a moment and try again.';
+        return "Too many requests. Please wait a moment and try again.";
       case 500:
-        return 'Something went wrong on our end. Please try again later.';
+        return "Something went wrong on our end. Please try again later.";
       default:
-        return 'An unexpected error occurred. Please try again.';
+        return "An unexpected error occurred. Please try again.";
     }
   }
-  
+
   if (error instanceof Error) {
     return error.message;
   }
-  
-  return 'An unexpected error occurred. Please try again.';
+
+  return "An unexpected error occurred. Please try again.";
 };
 
 export default api;

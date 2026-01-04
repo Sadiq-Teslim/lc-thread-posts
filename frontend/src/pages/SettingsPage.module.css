@@ -1,4 +1,10 @@
 .codeBlock {
-  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8)) !important;
-  border-color: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  background: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-dark-8)
+  ) !important;
+  border-color: light-dark(
+    var(--mantine-color-gray-3),
+    var(--mantine-color-dark-5)
+  );
 }

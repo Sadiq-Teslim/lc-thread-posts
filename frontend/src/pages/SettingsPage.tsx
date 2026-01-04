@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Container,
   Title,
@@ -20,8 +20,8 @@ import {
   CopyButton,
   ActionIcon,
   Tooltip,
-} from '@mantine/core';
-import { useForm } from '@mantine/form';
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
 import {
   IconSettings,
   IconKey,
@@ -35,36 +35,41 @@ import {
   IconLock,
   IconEye,
   IconEyeOff,
-} from '@tabler/icons-react';
-import { useSessionStore } from '../store/sessionStore';
-import { apiService, getErrorMessage, CredentialsPayload } from '../services/api';
-import { toast } from '../utils/toast';
-import classes from './SettingsPage.module.css';
+} from "@tabler/icons-react";
+import { useSessionStore } from "../store/sessionStore";
+import {
+  apiService,
+  getErrorMessage,
+  CredentialsPayload,
+} from "../services/api";
+import { toast } from "../utils/toast";
+import classes from "./SettingsPage.module.css";
 
 export function SettingsPage() {
-  const { hasValidSession, setSession, clearSession, expiresAt } = useSessionStore();
+  const { hasValidSession, setSession, clearSession, expiresAt } =
+    useSessionStore();
   const [loading, setLoading] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
 
   const form = useForm<CredentialsPayload>({
     initialValues: {
-      api_key: '',
-      api_secret: '',
-      access_token: '',
-      access_token_secret: '',
-      bearer_token: '',
+      api_key: "",
+      api_secret: "",
+      access_token: "",
+      access_token_secret: "",
+      bearer_token: "",
     },
     validate: {
       api_key: (value) =>
-        value.trim().length === 0 ? 'API Key is required' : null,
+        value.trim().length === 0 ? "API Key is required" : null,
       api_secret: (value) =>
-        value.trim().length === 0 ? 'API Secret is required' : null,
+        value.trim().length === 0 ? "API Secret is required" : null,
       access_token: (value) =>
-        value.trim().length === 0 ? 'Access Token is required' : null,
+        value.trim().length === 0 ? "Access Token is required" : null,
       access_token_secret: (value) =>
-        value.trim().length === 0 ? 'Access Token Secret is required' : null,
+        value.trim().length === 0 ? "Access Token Secret is required" : null,
       bearer_token: (value) =>
-        value.trim().length === 0 ? 'Bearer Token is required' : null,
+        value.trim().length === 0 ? "Bearer Token is required" : null,
     },
   });
 
@@ -75,24 +80,29 @@ export function SettingsPage() {
       const response = await apiService.createSession(values);
 
       if (response.success && response.session_id) {
-        const expiresAt = new Date(Date.now() + (response.expires_in || 86400) * 1000).toISOString();
+        const expiresAt = new Date(
+          Date.now() + (response.expires_in || 86400) * 1000
+        ).toISOString();
         setSession(response.session_id, expiresAt);
-        
+
         toast.success({
-          title: 'Connected Successfully',
-          message: response.message || 'Your X/Twitter account is now connected.',
+          title: "Connected Successfully",
+          message:
+            response.message || "Your X/Twitter account is now connected.",
         });
 
         form.reset();
       } else {
         toast.error({
-          title: 'Connection Failed',
-          message: response.message || 'Unable to connect. Please check your credentials.',
+          title: "Connection Failed",
+          message:
+            response.message ||
+            "Unable to connect. Please check your credentials.",
         });
       }
     } catch (error) {
       toast.error({
-        title: 'Connection Failed',
+        title: "Connection Failed",
         message: getErrorMessage(error),
       });
     } finally {
@@ -105,12 +115,12 @@ export function SettingsPage() {
       await apiService.destroySession();
       clearSession();
       toast.success({
-        title: 'Disconnected',
-        message: 'Your credentials have been securely removed.',
+        title: "Disconnected",
+        message: "Your credentials have been securely removed.",
       });
     } catch (error) {
       toast.error({
-        title: 'Error',
+        title: "Error",
         message: getErrorMessage(error),
       });
     }
@@ -124,7 +134,12 @@ export function SettingsPage() {
         {/* Header */}
         <Box>
           <Group gap="sm" mb="xs">
-            <ThemeIcon size="lg" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }} radius="md">
+            <ThemeIcon
+              size="lg"
+              variant="gradient"
+              gradient={{ from: "blue", to: "cyan" }}
+              radius="md"
+            >
               <IconSettings size={20} />
             </ThemeIcon>
             <Title order={1}>Settings</Title>
@@ -147,11 +162,11 @@ export function SettingsPage() {
                 variant="gradient"
                 gradient={
                   isConnected
-                    ? { from: 'green', to: 'teal' }
-                    : { from: 'gray', to: 'gray' }
+                    ? { from: "green", to: "teal" }
+                    : { from: "gray", to: "gray" }
                 }
               >
-                {isConnected ? 'Connected' : 'Not Connected'}
+                {isConnected ? "Connected" : "Not Connected"}
               </Badge>
               {isConnected && expiresAt && (
                 <Text size="xs" c="dimmed" mt="xs">
@@ -160,11 +175,7 @@ export function SettingsPage() {
               )}
             </Box>
             {isConnected && (
-              <Button
-                variant="subtle"
-                color="red"
-                onClick={handleDisconnect}
-              >
+              <Button variant="subtle" color="red" onClick={handleDisconnect}>
                 Disconnect
               </Button>
             )}
@@ -179,9 +190,9 @@ export function SettingsPage() {
           variant="light"
         >
           <Text size="sm">
-            Your API keys are encrypted and stored only in your browser's local session.
-            They are never sent to any third-party servers. The connection is validated
-            directly with X/Twitter's API.
+            Your API keys are encrypted and stored only in your browser's local
+            session. They are never sent to any third-party servers. The
+            connection is validated directly with X/Twitter's API.
           </Text>
         </Alert>
 
@@ -195,12 +206,16 @@ export function SettingsPage() {
                     <IconKey size={20} />
                     <Text fw={600}>API Credentials</Text>
                   </Group>
-                  <Tooltip label={showKeys ? 'Hide all keys' : 'Show all keys'}>
+                  <Tooltip label={showKeys ? "Hide all keys" : "Show all keys"}>
                     <ActionIcon
                       variant="subtle"
                       onClick={() => setShowKeys(!showKeys)}
                     >
-                      {showKeys ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+                      {showKeys ? (
+                        <IconEyeOff size={18} />
+                      ) : (
+                        <IconEye size={18} />
+                      )}
                     </ActionIcon>
                   </Tooltip>
                 </Group>
@@ -208,8 +223,8 @@ export function SettingsPage() {
                 <Divider />
 
                 <Text size="sm" c="dimmed">
-                  Enter your X/Twitter Developer API credentials. You can find these
-                  in your{' '}
+                  Enter your X/Twitter Developer API credentials. You can find
+                  these in your{" "}
                   <Anchor
                     href="https://developer.twitter.com/en/portal/dashboard"
                     target="_blank"
@@ -224,35 +239,35 @@ export function SettingsPage() {
                       label="API Key (Consumer Key)"
                       placeholder="Enter your API Key"
                       leftSection={<IconKey size={16} />}
-                      {...form.getInputProps('api_key')}
+                      {...form.getInputProps("api_key")}
                     />
 
                     <TextInput
                       label="API Secret (Consumer Secret)"
                       placeholder="Enter your API Secret"
                       leftSection={<IconLock size={16} />}
-                      {...form.getInputProps('api_secret')}
+                      {...form.getInputProps("api_secret")}
                     />
 
                     <TextInput
                       label="Access Token"
                       placeholder="Enter your Access Token"
                       leftSection={<IconKey size={16} />}
-                      {...form.getInputProps('access_token')}
+                      {...form.getInputProps("access_token")}
                     />
 
                     <TextInput
                       label="Access Token Secret"
                       placeholder="Enter your Access Token Secret"
                       leftSection={<IconLock size={16} />}
-                      {...form.getInputProps('access_token_secret')}
+                      {...form.getInputProps("access_token_secret")}
                     />
 
                     <TextInput
                       label="Bearer Token"
                       placeholder="Enter your Bearer Token"
                       leftSection={<IconKey size={16} />}
-                      {...form.getInputProps('bearer_token')}
+                      {...form.getInputProps("bearer_token")}
                     />
                   </>
                 ) : (
@@ -261,35 +276,35 @@ export function SettingsPage() {
                       label="API Key (Consumer Key)"
                       placeholder="Enter your API Key"
                       leftSection={<IconKey size={16} />}
-                      {...form.getInputProps('api_key')}
+                      {...form.getInputProps("api_key")}
                     />
 
                     <PasswordInput
                       label="API Secret (Consumer Secret)"
                       placeholder="Enter your API Secret"
                       leftSection={<IconLock size={16} />}
-                      {...form.getInputProps('api_secret')}
+                      {...form.getInputProps("api_secret")}
                     />
 
                     <PasswordInput
                       label="Access Token"
                       placeholder="Enter your Access Token"
                       leftSection={<IconKey size={16} />}
-                      {...form.getInputProps('access_token')}
+                      {...form.getInputProps("access_token")}
                     />
 
                     <PasswordInput
                       label="Access Token Secret"
                       placeholder="Enter your Access Token Secret"
                       leftSection={<IconLock size={16} />}
-                      {...form.getInputProps('access_token_secret')}
+                      {...form.getInputProps("access_token_secret")}
                     />
 
                     <PasswordInput
                       label="Bearer Token"
                       placeholder="Enter your Bearer Token"
                       leftSection={<IconKey size={16} />}
-                      {...form.getInputProps('bearer_token')}
+                      {...form.getInputProps("bearer_token")}
                     />
                   </>
                 )}
@@ -298,7 +313,7 @@ export function SettingsPage() {
                   type="submit"
                   loading={loading}
                   variant="gradient"
-                  gradient={{ from: 'blue', to: 'cyan' }}
+                  gradient={{ from: "blue", to: "cyan" }}
                   size="md"
                   fullWidth
                   mt="md"
@@ -321,7 +336,7 @@ export function SettingsPage() {
                 <Stack gap="md">
                   <List spacing="sm" size="sm">
                     <List.Item>
-                      Go to the{' '}
+                      Go to the{" "}
                       <Anchor
                         href="https://developer.twitter.com/en/portal/dashboard"
                         target="_blank"
@@ -329,16 +344,19 @@ export function SettingsPage() {
                         Twitter Developer Portal
                       </Anchor>
                     </List.Item>
-                    <List.Item>Create a new project and app if you haven't already</List.Item>
+                    <List.Item>
+                      Create a new project and app if you haven't already
+                    </List.Item>
                     <List.Item>
                       Navigate to your app's "Keys and tokens" section
                     </List.Item>
                     <List.Item>
-                      Generate and copy your API Key, API Secret, Access Token, and
-                      Access Token Secret
+                      Generate and copy your API Key, API Secret, Access Token,
+                      and Access Token Secret
                     </List.Item>
                     <List.Item>
-                      Make sure your app has <strong>Read and Write</strong> permissions
+                      Make sure your app has <strong>Read and Write</strong>{" "}
+                      permissions
                     </List.Item>
                   </List>
 
@@ -348,8 +366,9 @@ export function SettingsPage() {
                     color="yellow"
                     variant="light"
                   >
-                    Make sure your Twitter Developer account has{' '}
-                    <strong>Elevated access</strong> or higher to post tweets via the API.
+                    Make sure your Twitter Developer account has{" "}
+                    <strong>Elevated access</strong> or higher to post tweets
+                    via the API.
                   </Alert>
                 </Stack>
               </Accordion.Panel>
@@ -362,16 +381,19 @@ export function SettingsPage() {
               <Accordion.Panel>
                 <List spacing="sm" size="sm">
                   <List.Item>
-                    Your API keys are encrypted using industry-standard encryption
+                    Your API keys are encrypted using industry-standard
+                    encryption
                   </List.Item>
                   <List.Item>
-                    Keys are stored only in your browser's session, not on any server
+                    Keys are stored only in your browser's session, not on any
+                    server
                   </List.Item>
                   <List.Item>
                     Sessions automatically expire after 24 hours for security
                   </List.Item>
                   <List.Item>
-                    You can disconnect at any time to remove all stored credentials
+                    You can disconnect at any time to remove all stored
+                    credentials
                   </List.Item>
                   <List.Item>
                     The app communicates directly with X/Twitter's official API
@@ -387,11 +409,16 @@ export function SettingsPage() {
               <Accordion.Panel>
                 <Stack gap="md">
                   <Text size="sm">
-                    If you prefer, you can also set your credentials using environment
-                    variables in the backend:
+                    If you prefer, you can also set your credentials using
+                    environment variables in the backend:
                   </Text>
 
-                  <Card withBorder p="sm" bg="dark.8" className={classes.codeBlock}>
+                  <Card
+                    withBorder
+                    p="sm"
+                    bg="dark.8"
+                    className={classes.codeBlock}
+                  >
                     <Group justify="space-between" mb="xs">
                       <Text size="xs" c="dimmed">
                         .env file
@@ -404,14 +431,18 @@ TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
 TWITTER_BEARER_TOKEN=your_bearer_token`}
                       >
                         {({ copied, copy }) => (
-                          <Tooltip label={copied ? 'Copied!' : 'Copy'}>
+                          <Tooltip label={copied ? "Copied!" : "Copy"}>
                             <ActionIcon
                               variant="subtle"
-                              color={copied ? 'green' : 'gray'}
+                              color={copied ? "green" : "gray"}
                               onClick={copy}
                               size="sm"
                             >
-                              {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                              {copied ? (
+                                <IconCheck size={14} />
+                              ) : (
+                                <IconCopy size={14} />
+                              )}
                             </ActionIcon>
                           </Tooltip>
                         )}
@@ -419,12 +450,15 @@ TWITTER_BEARER_TOKEN=your_bearer_token`}
                     </Group>
                     <Text
                       size="xs"
-                      style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}
+                      style={{
+                        fontFamily: "monospace",
+                        whiteSpace: "pre-wrap",
+                      }}
                     >
-                      TWITTER_API_KEY=your_api_key{'\n'}
-                      TWITTER_API_SECRET=your_api_secret{'\n'}
-                      TWITTER_ACCESS_TOKEN=your_access_token{'\n'}
-                      TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret{'\n'}
+                      TWITTER_API_KEY=your_api_key{"\n"}
+                      TWITTER_API_SECRET=your_api_secret{"\n"}
+                      TWITTER_ACCESS_TOKEN=your_access_token{"\n"}
+                      TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret{"\n"}
                       TWITTER_BEARER_TOKEN=your_bearer_token
                     </Text>
                   </Card>

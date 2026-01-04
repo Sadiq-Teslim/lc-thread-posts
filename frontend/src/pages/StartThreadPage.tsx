@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Title,
@@ -17,9 +17,9 @@ import {
   Paper,
   Divider,
   Modal,
-} from '@mantine/core';
-import { useForm } from '@mantine/form';
-import { useDisclosure } from '@mantine/hooks';
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconPlus,
   IconEye,
@@ -28,31 +28,36 @@ import {
   IconExternalLink,
   IconArrowLeft,
   IconAlertTriangle,
-} from '@tabler/icons-react';
-import { useProgressStore } from '../store/progressStore';
-import { apiService, getErrorMessage } from '../services/api';
-import { toast } from '../utils/toast';
-import classes from './StartThreadPage.module.css';
+} from "@tabler/icons-react";
+import { useProgressStore } from "../store/progressStore";
+import { apiService, getErrorMessage } from "../services/api";
+import { toast } from "../utils/toast";
+import classes from "./StartThreadPage.module.css";
 
 const MAX_CHARS = 280;
 
 export function StartThreadPage() {
   const navigate = useNavigate();
-  const { hasActiveThread, currentDay, setProgress, resetProgress } = useProgressStore();
-  
+  const { hasActiveThread, currentDay, setProgress, resetProgress } =
+    useProgressStore();
+
   const [loading, setLoading] = useState(false);
   const [posted, setPosted] = useState(false);
   const [tweetUrl, setTweetUrl] = useState<string | null>(null);
-  const [confirmModalOpened, { open: openConfirmModal, close: closeConfirmModal }] = useDisclosure(false);
+  const [
+    confirmModalOpened,
+    { open: openConfirmModal, close: closeConfirmModal },
+  ] = useDisclosure(false);
 
   const form = useForm({
     initialValues: {
-      intro_text: '',
+      intro_text: "",
     },
     validate: {
       intro_text: (value) => {
-        if (!value.trim()) return 'Introduction text is required';
-        if (value.length > MAX_CHARS) return `Text must be ${MAX_CHARS} characters or less`;
+        if (!value.trim()) return "Introduction text is required";
+        if (value.length > MAX_CHARS)
+          return `Text must be ${MAX_CHARS} characters or less`;
         return null;
       },
     },
@@ -87,7 +92,7 @@ export function StartThreadPage() {
       if (response.success && response.data) {
         setPosted(true);
         setTweetUrl(response.data.tweet_url);
-        
+
         // Update progress store
         const progressResponse = await apiService.getProgress();
         if (progressResponse.success && progressResponse.data) {
@@ -95,20 +100,23 @@ export function StartThreadPage() {
         }
 
         toast.success({
-          title: 'Thread Started! 🚀',
-          message: 'Your LeetCode thread has been created. Start posting Day 1!',
+          title: "Thread Started! 🚀",
+          message:
+            "Your LeetCode thread has been created. Start posting Day 1!",
         });
 
         form.reset();
       } else {
         toast.error({
-          title: 'Failed to Start Thread',
-          message: response.message || 'Unable to create your thread. Please try again.',
+          title: "Failed to Start Thread",
+          message:
+            response.message ||
+            "Unable to create your thread. Please try again.",
         });
       }
     } catch (error) {
       toast.error({
-        title: 'Failed to Start Thread',
+        title: "Failed to Start Thread",
         message: getErrorMessage(error),
       });
     } finally {
@@ -125,14 +133,14 @@ export function StartThreadPage() {
               size={80}
               radius="xl"
               variant="gradient"
-              gradient={{ from: 'grape', to: 'pink' }}
+              gradient={{ from: "grape", to: "pink" }}
             >
               <IconCheck size={40} />
             </ThemeIcon>
             <Title order={2}>Thread Created! 🚀</Title>
             <Text c="dimmed" ta="center">
-              Your LeetCode thread has been started. Now you can begin posting your
-              daily solutions!
+              Your LeetCode thread has been started. Now you can begin posting
+              your daily solutions!
             </Text>
             <Group>
               <Button
@@ -146,8 +154,8 @@ export function StartThreadPage() {
               </Button>
               <Button
                 variant="gradient"
-                gradient={{ from: 'blue', to: 'cyan' }}
-                onClick={() => navigate('/post')}
+                gradient={{ from: "blue", to: "cyan" }}
+                onClick={() => navigate("/post")}
               >
                 Post Day 1
               </Button>
@@ -166,7 +174,7 @@ export function StartThreadPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={16} />}
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             mb="md"
             p={0}
           >
@@ -176,19 +184,19 @@ export function StartThreadPage() {
             <ThemeIcon
               size="lg"
               variant="gradient"
-              gradient={{ from: 'grape', to: 'pink' }}
+              gradient={{ from: "grape", to: "pink" }}
               radius="md"
             >
               <IconPlus size={20} />
             </ThemeIcon>
             <Title order={1}>
-              {hasActiveThread ? 'Start New Thread' : 'Start Thread'}
+              {hasActiveThread ? "Start New Thread" : "Start Thread"}
             </Title>
           </Group>
           <Text c="dimmed">
             {hasActiveThread
-              ? 'Reset your progress and begin a fresh LeetCode journey'
-              : 'Create the introduction tweet for your LeetCode thread'}
+              ? "Reset your progress and begin a fresh LeetCode journey"
+              : "Create the introduction tweet for your LeetCode thread"}
           </Text>
         </Box>
 
@@ -201,9 +209,9 @@ export function StartThreadPage() {
             variant="light"
           >
             <Text size="sm">
-              You already have an active thread with {currentDay} days of progress.
-              Starting a new thread will reset your local progress counter. Your
-              existing tweets will remain on X/Twitter.
+              You already have an active thread with {currentDay} days of
+              progress. Starting a new thread will reset your local progress
+              counter. Your existing tweets will remain on X/Twitter.
             </Text>
           </Alert>
         )}
@@ -220,7 +228,7 @@ export function StartThreadPage() {
                   minRows={4}
                   maxRows={6}
                   size="md"
-                  {...form.getInputProps('intro_text')}
+                  {...form.getInputProps("intro_text")}
                 />
 
                 <Box>
@@ -229,7 +237,13 @@ export function StartThreadPage() {
                       Character count
                     </Text>
                     <Badge
-                      color={isValidLength ? 'green' : charCount === 0 ? 'gray' : 'red'}
+                      color={
+                        isValidLength
+                          ? "green"
+                          : charCount === 0
+                          ? "gray"
+                          : "red"
+                      }
                       variant="light"
                     >
                       {charCount} / {MAX_CHARS}
@@ -237,7 +251,9 @@ export function StartThreadPage() {
                   </Group>
                   <Progress
                     value={(charCount / MAX_CHARS) * 100}
-                    color={isValidLength ? 'blue' : charCount === 0 ? 'gray' : 'red'}
+                    color={
+                      isValidLength ? "blue" : charCount === 0 ? "gray" : "red"
+                    }
                     size="sm"
                     radius="xl"
                   />
@@ -249,7 +265,8 @@ export function StartThreadPage() {
                     color="red"
                     variant="light"
                   >
-                    Tweet exceeds 280 characters. Please shorten your introduction.
+                    Tweet exceeds 280 characters. Please shorten your
+                    introduction.
                   </Alert>
                 )}
 
@@ -260,12 +277,14 @@ export function StartThreadPage() {
                   loading={loading}
                   disabled={!isValidLength}
                   variant="gradient"
-                  gradient={{ from: 'grape', to: 'pink' }}
+                  gradient={{ from: "grape", to: "pink" }}
                   size="lg"
                   fullWidth
                   leftSection={<IconPlus size={20} />}
                 >
-                  {hasActiveThread ? 'Reset & Start New Thread' : 'Start Thread'}
+                  {hasActiveThread
+                    ? "Reset & Start New Thread"
+                    : "Start Thread"}
                 </Button>
               </Stack>
             </form>
@@ -288,7 +307,9 @@ export function StartThreadPage() {
                   radius="md"
                   className={classes.previewBox}
                 >
-                  <Text style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <Text
+                    style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  >
                     {form.values.intro_text}
                   </Text>
                 </Paper>
@@ -307,9 +328,9 @@ export function StartThreadPage() {
                 title="What happens next?"
               >
                 <Text size="sm">
-                  After posting this introduction tweet, you'll be ready to post Day 1
-                  of your LeetCode journey. Each subsequent post will automatically
-                  reply to this thread.
+                  After posting this introduction tweet, you'll be ready to post
+                  Day 1 of your LeetCode journey. Each subsequent post will
+                  automatically reply to this thread.
                 </Text>
               </Alert>
             </Stack>
@@ -323,17 +344,17 @@ export function StartThreadPage() {
           </Text>
           <Group gap="sm" wrap="wrap">
             {[
-              'A thread of my daily LeetCode submissions 🧵👇',
-              'Starting my #100DaysOfCode with LeetCode! 💻',
-              'Documenting my DSA journey, one problem at a time 🚀',
-              'Daily LeetCode grind thread 🎯 #coding #leetcode',
+              "A thread of my daily LeetCode submissions 🧵👇",
+              "Starting my #100DaysOfCode with LeetCode! 💻",
+              "Documenting my DSA journey, one problem at a time 🚀",
+              "Daily LeetCode grind thread 🎯 #coding #leetcode",
             ].map((example) => (
               <Badge
                 key={example}
                 variant="light"
                 size="lg"
-                style={{ cursor: 'pointer' }}
-                onClick={() => form.setFieldValue('intro_text', example)}
+                style={{ cursor: "pointer" }}
+                onClick={() => form.setFieldValue("intro_text", example)}
               >
                 {example}
               </Badge>

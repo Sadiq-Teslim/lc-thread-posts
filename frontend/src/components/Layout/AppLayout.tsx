@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import {
   AppShell,
   Burger,
@@ -18,8 +18,8 @@ import {
   UnstyledButton,
   Stack,
   rem,
-} from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+} from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconHome,
   IconSettings,
@@ -31,22 +31,32 @@ import {
   IconBrandTwitter,
   IconCode,
   IconChevronRight,
-} from '@tabler/icons-react';
-import { useSessionStore } from '../../store/sessionStore';
-import { useProgressStore } from '../../store/progressStore';
-import { apiService, getErrorMessage } from '../../services/api';
-import { toast } from '../../utils/toast';
-import classes from './AppLayout.module.css';
+} from "@tabler/icons-react";
+import { useSessionStore } from "../../store/sessionStore";
+import { useProgressStore } from "../../store/progressStore";
+import { apiService, getErrorMessage } from "../../services/api";
+import { toast } from "../../utils/toast";
+import classes from "./AppLayout.module.css";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const navItems = [
-  { label: 'Home', icon: IconHome, path: '/', requiresAuth: true },
-  { label: 'Post Solution', icon: IconSend, path: '/post', requiresAuth: true },
-  { label: 'Start Thread', icon: IconPlus, path: '/start-thread', requiresAuth: true },
-  { label: 'Settings', icon: IconSettings, path: '/settings', requiresAuth: false },
+  { label: "Home", icon: IconHome, path: "/", requiresAuth: true },
+  { label: "Post Solution", icon: IconSend, path: "/post", requiresAuth: true },
+  {
+    label: "Start Thread",
+    icon: IconPlus,
+    path: "/start-thread",
+    requiresAuth: true,
+  },
+  {
+    label: "Settings",
+    icon: IconSettings,
+    path: "/settings",
+    requiresAuth: false,
+  },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -54,11 +64,15 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const { hasValidSession, clearSession, sessionId } = useSessionStore();
   const { currentDay, hasActiveThread, setProgress } = useProgressStore();
-  
-  const [userInfo, setUserInfo] = useState<{ username: string; name: string; profile_image_url: string | null } | null>(null);
+
+  const [userInfo, setUserInfo] = useState<{
+    username: string;
+    name: string;
+    profile_image_url: string | null;
+  } | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
 
   const isAuthenticated = hasValidSession();
@@ -111,13 +125,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       clearSession();
       setUserInfo(null);
       toast.success({
-        title: 'Logged Out',
-        message: 'Your credentials have been securely removed.',
+        title: "Logged Out",
+        message: "Your credentials have been securely removed.",
       });
-      navigate('/settings');
+      navigate("/settings");
     } catch (error) {
       toast.error({
-        title: 'Error',
+        title: "Error",
         message: getErrorMessage(error),
       });
     }
@@ -126,10 +140,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   const handleNavClick = (path: string, requiresAuth: boolean) => {
     if (requiresAuth && !isAuthenticated) {
       toast.warning({
-        title: 'Configuration Required',
-        message: 'Please configure your API keys first.',
+        title: "Configuration Required",
+        message: "Please configure your API keys first.",
       });
-      navigate('/settings');
+      navigate("/settings");
     } else {
       navigate(path);
     }
@@ -141,7 +155,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       header={{ height: 60 }}
       navbar={{
         width: 280,
-        breakpoint: 'sm',
+        breakpoint: "sm",
         collapsed: { mobile: !opened },
       }}
       padding="md"
@@ -149,8 +163,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppShell.Header className={classes.header}>
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+            />
+            <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
               <Group gap="xs">
                 <Box className={classes.logoIcon}>
                   <IconCode size={24} stroke={2} color="white" />
@@ -172,7 +191,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Tooltip label={`Currently on Day ${currentDay}`}>
                 <Badge
                   variant="gradient"
-                  gradient={{ from: 'blue', to: 'cyan' }}
+                  gradient={{ from: "blue", to: "cyan" }}
                   size="lg"
                   visibleFrom="sm"
                 >
@@ -181,14 +200,16 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Tooltip>
             )}
 
-            <Tooltip label={colorScheme === 'dark' ? 'Light mode' : 'Dark mode'}>
+            <Tooltip
+              label={colorScheme === "dark" ? "Light mode" : "Dark mode"}
+            >
               <ActionIcon
                 variant="subtle"
                 size="lg"
                 onClick={() => toggleColorScheme()}
                 aria-label="Toggle color scheme"
               >
-                {colorScheme === 'dark' ? (
+                {colorScheme === "dark" ? (
                   <IconSun size={20} stroke={1.5} />
                 ) : (
                   <IconMoon size={20} stroke={1.5} />
@@ -211,10 +232,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                           size="sm"
                           color="blue"
                         >
-                          {userInfo?.name?.[0] || 'U'}
+                          {userInfo?.name?.[0] || "U"}
                         </Avatar>
                         <Text size="sm" fw={500} visibleFrom="sm">
-                          {userInfo?.name || 'User'}
+                          {userInfo?.name || "User"}
                         </Text>
                       </Group>
                     )}
@@ -226,8 +247,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     <>
                       <Menu.Label>
                         <Group gap="xs">
-                          <IconBrandTwitter size={14} />
-                          @{userInfo.username}
+                          <IconBrandTwitter size={14} />@{userInfo.username}
                         </Group>
                       </Menu.Label>
                       <Divider my="xs" />
@@ -235,7 +255,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   )}
                   <Menu.Item
                     leftSection={<IconSettings size={14} />}
-                    onClick={() => navigate('/settings')}
+                    onClick={() => navigate("/settings")}
                   >
                     Settings
                   </Menu.Item>
@@ -259,11 +279,11 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb="xs">
             Navigation
           </Text>
-          
+
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const isDisabled = item.requiresAuth && !isAuthenticated;
-            
+
             return (
               <NavLink
                 key={item.path}
@@ -280,7 +300,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                       stroke={1.5}
                       style={{
                         opacity: isActive ? 1 : 0,
-                        transition: 'opacity 150ms',
+                        transition: "opacity 150ms",
                       }}
                     />
                   )

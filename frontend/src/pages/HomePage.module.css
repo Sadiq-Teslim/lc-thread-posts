@@ -8,7 +8,7 @@
 
 .statCard {
   transition: transform 200ms ease, box-shadow 200ms ease;
-  
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--mantine-shadow-md);
@@ -17,15 +17,20 @@
 
 .statValue {
   font-size: 2rem;
-  background: linear-gradient(135deg, var(--mantine-color-blue-6), var(--mantine-color-cyan-6));
+  background: linear-gradient(
+    135deg,
+    var(--mantine-color-blue-6),
+    var(--mantine-color-cyan-6)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .actionCard {
-  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
-  
+  transition: transform 200ms ease, box-shadow 200ms ease,
+    border-color 200ms ease;
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--mantine-shadow-md);

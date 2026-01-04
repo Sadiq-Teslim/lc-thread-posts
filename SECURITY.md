@@ -2,10 +2,10 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 2.x.x   | Yes                |
-| 1.x.x   | Limited            |
+| Version | Supported |
+| ------- | --------- |
+| 2.x.x   | Yes       |
+| 1.x.x   | Limited   |
 
 ## Security Features
 
@@ -50,11 +50,13 @@ If you discover a security vulnerability, please report it responsibly:
 ## Best Practices for Users
 
 1. **Protect Your API Keys**
+
    - Never share your X/Twitter API credentials
    - Use dedicated API keys for this application
    - Regularly rotate your credentials
 
 2. **Session Security**
+
    - Log out when using shared computers
    - Don't store credentials in plain text files
    - Use strong, unique passwords for your X/Twitter account

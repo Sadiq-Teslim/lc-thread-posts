@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Title,
@@ -16,8 +16,8 @@ import {
   ThemeIcon,
   Paper,
   Divider,
-} from '@mantine/core';
-import { useForm } from '@mantine/form';
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
 import {
   IconSend,
   IconLink,
@@ -27,18 +27,19 @@ import {
   IconCheck,
   IconExternalLink,
   IconArrowLeft,
-} from '@tabler/icons-react';
-import { useProgressStore } from '../store/progressStore';
-import { apiService, getErrorMessage } from '../services/api';
-import { toast } from '../utils/toast';
-import classes from './PostSolutionPage.module.css';
+} from "@tabler/icons-react";
+import { useProgressStore } from "../store/progressStore";
+import { apiService, getErrorMessage } from "../services/api";
+import { toast } from "../utils/toast";
+import classes from "./PostSolutionPage.module.css";
 
 const MAX_CHARS = 280;
 
 export function PostSolutionPage() {
   const navigate = useNavigate();
-  const { currentDay, hasActiveThread, nextDay, setProgress } = useProgressStore();
-  
+  const { currentDay, hasActiveThread, nextDay, setProgress } =
+    useProgressStore();
+
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<{
     text: string;
@@ -50,19 +51,19 @@ export function PostSolutionPage() {
 
   const form = useForm({
     initialValues: {
-      gist_url: '',
-      problem_name: '',
+      gist_url: "",
+      problem_name: "",
     },
     validate: {
       gist_url: (value) => {
-        if (!value.trim()) return 'Gist URL is required';
-        if (!value.includes('gist.github.com') && !value.startsWith('http')) {
-          return 'Please enter a valid URL';
+        if (!value.trim()) return "Gist URL is required";
+        if (!value.includes("gist.github.com") && !value.startsWith("http")) {
+          return "Please enter a valid URL";
         }
         return null;
       },
       problem_name: (value) =>
-        !value.trim() ? 'Problem name is required' : null,
+        !value.trim() ? "Problem name is required" : null,
     },
   });
 
@@ -81,25 +82,31 @@ export function PostSolutionPage() {
     }
   }, [form.values, nextDay]);
 
-  const handleSubmit = async (values: { gist_url: string; problem_name: string }) => {
+  const handleSubmit = async (values: {
+    gist_url: string;
+    problem_name: string;
+  }) => {
     if (!hasActiveThread) {
       toast.error({
-        title: 'No Active Thread',
-        message: 'Please start a thread first before posting solutions.',
+        title: "No Active Thread",
+        message: "Please start a thread first before posting solutions.",
       });
-      navigate('/start-thread');
+      navigate("/start-thread");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await apiService.postSolution(values.gist_url, values.problem_name);
+      const response = await apiService.postSolution(
+        values.gist_url,
+        values.problem_name
+      );
 
       if (response.success && response.data) {
         setPosted(true);
         setTweetUrl(response.data.tweet_url);
-        
+
         // Update progress store
         const progressResponse = await apiService.getProgress();
         if (progressResponse.success && progressResponse.data) {
@@ -108,19 +115,21 @@ export function PostSolutionPage() {
 
         toast.success({
           title: `Day ${response.data.day} Posted! 🎉`,
-          message: 'Your solution has been posted to your thread.',
+          message: "Your solution has been posted to your thread.",
         });
 
         form.reset();
       } else {
         toast.error({
-          title: 'Post Failed',
-          message: response.message || 'Unable to post your solution. Please try again.',
+          title: "Post Failed",
+          message:
+            response.message ||
+            "Unable to post your solution. Please try again.",
         });
       }
     } catch (error) {
       toast.error({
-        title: 'Post Failed',
+        title: "Post Failed",
         message: getErrorMessage(error),
       });
     } finally {
@@ -144,13 +153,13 @@ export function PostSolutionPage() {
             </ThemeIcon>
             <Title order={3}>No Active Thread</Title>
             <Text c="dimmed" maw={400}>
-              You need to start a thread before you can post solutions. Create your
-              first thread to begin your LeetCode posting journey!
+              You need to start a thread before you can post solutions. Create
+              your first thread to begin your LeetCode posting journey!
             </Text>
             <Button
               variant="gradient"
-              gradient={{ from: 'grape', to: 'pink' }}
-              onClick={() => navigate('/start-thread')}
+              gradient={{ from: "grape", to: "pink" }}
+              onClick={() => navigate("/start-thread")}
             >
               Start a Thread
             </Button>
@@ -169,15 +178,20 @@ export function PostSolutionPage() {
               size={80}
               radius="xl"
               variant="gradient"
-              gradient={{ from: 'green', to: 'teal' }}
+              gradient={{ from: "green", to: "teal" }}
             >
               <IconCheck size={40} />
             </ThemeIcon>
             <Title order={2}>Day {currentDay} Posted! 🎉</Title>
             <Text c="dimmed" ta="center">
-              Your LeetCode solution has been successfully posted to your thread.
+              Your LeetCode solution has been successfully posted to your
+              thread.
             </Text>
-            <Badge size="xl" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }}>
+            <Badge
+              size="xl"
+              variant="gradient"
+              gradient={{ from: "blue", to: "cyan" }}
+            >
               {currentDay} Day Streak
             </Badge>
             <Group>
@@ -192,7 +206,7 @@ export function PostSolutionPage() {
               </Button>
               <Button
                 variant="gradient"
-                gradient={{ from: 'blue', to: 'cyan' }}
+                gradient={{ from: "blue", to: "cyan" }}
                 onClick={handlePostAnother}
               >
                 Post Another Solution
@@ -212,7 +226,7 @@ export function PostSolutionPage() {
           <Button
             variant="subtle"
             leftSection={<IconArrowLeft size={16} />}
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             mb="md"
             p={0}
           >
@@ -222,7 +236,7 @@ export function PostSolutionPage() {
             <ThemeIcon
               size="lg"
               variant="gradient"
-              gradient={{ from: 'blue', to: 'cyan' }}
+              gradient={{ from: "blue", to: "cyan" }}
               radius="md"
             >
               <IconSend size={20} />
@@ -245,7 +259,7 @@ export function PostSolutionPage() {
                   placeholder="e.g., Two Sum, Valid Parentheses"
                   leftSection={<IconCode size={16} />}
                   size="md"
-                  {...form.getInputProps('problem_name')}
+                  {...form.getInputProps("problem_name")}
                 />
 
                 <TextInput
@@ -254,7 +268,7 @@ export function PostSolutionPage() {
                   placeholder="https://gist.github.com/username/..."
                   leftSection={<IconLink size={16} />}
                   size="md"
-                  {...form.getInputProps('gist_url')}
+                  {...form.getInputProps("gist_url")}
                 />
 
                 <Divider my="sm" />
@@ -264,7 +278,7 @@ export function PostSolutionPage() {
                   loading={loading}
                   disabled={!preview?.isValid}
                   variant="gradient"
-                  gradient={{ from: 'blue', to: 'cyan' }}
+                  gradient={{ from: "blue", to: "cyan" }}
                   size="lg"
                   fullWidth
                   leftSection={<IconSend size={20} />}
@@ -294,7 +308,10 @@ export function PostSolutionPage() {
                     className={classes.previewBox}
                   >
                     <Text
-                      style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                      }}
                     >
                       {preview.text}
                     </Text>
@@ -306,7 +323,7 @@ export function PostSolutionPage() {
                         Character count
                       </Text>
                       <Badge
-                        color={preview.isValid ? 'green' : 'red'}
+                        color={preview.isValid ? "green" : "red"}
                         variant="light"
                       >
                         {preview.charCount} / {MAX_CHARS}
@@ -314,7 +331,7 @@ export function PostSolutionPage() {
                     </Group>
                     <Progress
                       value={(preview.charCount / MAX_CHARS) * 100}
-                      color={preview.isValid ? 'blue' : 'red'}
+                      color={preview.isValid ? "blue" : "red"}
                       size="sm"
                       radius="xl"
                     />
@@ -326,7 +343,8 @@ export function PostSolutionPage() {
                       color="red"
                       variant="light"
                     >
-                      Tweet exceeds 280 characters. Please shorten the problem name.
+                      Tweet exceeds 280 characters. Please shorten the problem
+                      name.
                     </Alert>
                   )}
                 </>
@@ -348,8 +366,9 @@ export function PostSolutionPage() {
           variant="light"
           color="blue"
         >
-          Create a GitHub Gist with your solution code and paste the URL here. This
-          keeps your tweets clean and lets followers see your full solution!
+          Create a GitHub Gist with your solution code and paste the URL here.
+          This keeps your tweets clean and lets followers see your full
+          solution!
         </Alert>
       </Stack>
     </Container>

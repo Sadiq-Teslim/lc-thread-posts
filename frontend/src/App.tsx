@@ -1,63 +1,65 @@
-import { MantineProvider, createTheme } from '@mantine/core';
-import { Notifications } from '@mantine/notifications';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useSessionStore } from './store/sessionStore';
-import { AppLayout } from './components/Layout/AppLayout';
-import { HomePage } from './pages/HomePage';
-import { SettingsPage } from './pages/SettingsPage';
-import { PostSolutionPage } from './pages/PostSolutionPage';
-import { StartThreadPage } from './pages/StartThreadPage';
-import { ProtectedRoute } from './components/Auth/ProtectedRoute';
+import { MantineProvider, createTheme } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useSessionStore } from "./store/sessionStore";
+import { AppLayout } from "./components/Layout/AppLayout";
+import { HomePage } from "./pages/HomePage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { PostSolutionPage } from "./pages/PostSolutionPage";
+import { StartThreadPage } from "./pages/StartThreadPage";
+import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 
 const theme = createTheme({
-  primaryColor: 'blue',
+  primaryColor: "blue",
   primaryShade: 6,
-  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+  fontFamily:
+    "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
   headings: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
-    fontWeight: '700',
+    fontFamily:
+      "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+    fontWeight: "700",
   },
-  defaultRadius: 'md',
-  cursorType: 'pointer',
+  defaultRadius: "md",
+  cursorType: "pointer",
   colors: {
     brand: [
-      '#e7f5ff',
-      '#d0ebff',
-      '#a5d8ff',
-      '#74c0fc',
-      '#4dabf7',
-      '#339af0',
-      '#228be6',
-      '#1c7ed6',
-      '#1971c2',
-      '#1864ab',
+      "#e7f5ff",
+      "#d0ebff",
+      "#a5d8ff",
+      "#74c0fc",
+      "#4dabf7",
+      "#339af0",
+      "#228be6",
+      "#1c7ed6",
+      "#1971c2",
+      "#1864ab",
     ],
   },
   components: {
     Button: {
       defaultProps: {
-        radius: 'md',
+        radius: "md",
       },
     },
     Card: {
       defaultProps: {
-        radius: 'lg',
-        shadow: 'sm',
+        radius: "lg",
+        shadow: "sm",
       },
     },
     TextInput: {
       defaultProps: {
-        radius: 'md',
+        radius: "md",
       },
     },
     Textarea: {
       defaultProps: {
-        radius: 'md',
+        radius: "md",
       },
     },
     PasswordInput: {
       defaultProps: {
-        radius: 'md',
+        radius: "md",
       },
     },
   },
