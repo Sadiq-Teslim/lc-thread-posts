@@ -26,7 +26,7 @@ try:
         consumer_key=API_KEY,
         consumer_secret=API_SECRET,
         access_token=ACCESS_TOKEN,
-        access_token_secret=ACCESS_TOKEN_SECRET,
+        access_token_secret=ACCESS_TOKEN_SECRET
     )
     print("Successfully connected to X API")
 except Exception as e:
@@ -37,7 +37,7 @@ except Exception as e:
 def load_progress():
     """Load the current day number and thread ID from progress.json"""
     try:
-        with open("progress.json", "r") as f:
+        with open('progress.json', 'r') as f:
             data = json.load(f)
             print(f"Current progress: Day {data['day']}")
             return data
@@ -48,62 +48,62 @@ def load_progress():
 
 def save_progress(day, thread_id):
     """Save the current day number and thread ID to progress.json"""
-    with open("progress.json", "w") as f:
+    with open('progress.json', 'w') as f:
         json.dump({"day": day, "thread_id": thread_id}, f, indent=2)
     print(f"Progress saved: Day {day}")
 
 
 def post_solution(gist_url, problem_name):
     """Post the LeetCode solution to X"""
-
+    
     # Load current progress
     progress = load_progress()
     day = progress["day"] + 1
     thread_id = progress["thread_id"]
-
+    
     # Create tweet text
     tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
-
-    print("\n" + "=" * 50)
+    
+    print("\n" + "="*50)
     print("TWEET PREVIEW:")
-    print("=" * 50)
+    print("="*50)
     print(tweet_text)
-    print("=" * 50)
-
+    print("="*50)
+    
     # Confirm before posting
     confirm = input("\nPost this tweet? (yes/no): ").strip().lower()
-    if confirm not in ["yes", "y"]:
+    if confirm not in ['yes', 'y']:
         print("Cancelled. Tweet not posted.")
         return
-
+    
     try:
         # Post tweet
         if thread_id is None:
             # First tweet - start the thread
             print("\nPosting Day 1 and starting thread...")
             response = client.create_tweet(
-                text=tweet_text, reply_settings="mentionedUsers"
+                text=tweet_text,
+                reply_settings="mentionedUsers"
             )
-            new_thread_id = response.data["id"]
+            new_thread_id = response.data['id']
             print(f"Thread started with Day {day}!")
         else:
             # Reply to the existing thread
             print(f"\nPosting Day {day} as reply to thread...")
             response = client.create_tweet(
                 text=tweet_text,
-                in_reply_to_tweet_id=thread_id,
-                reply_settings="mentionedUsers",
+                in_reply_to_tweet_id=thread_id
             )
             new_thread_id = thread_id  # Keep the original thread ID
             print(f"Day {day} posted to thread!")
-
+        
         # Save progress
         save_progress(day, new_thread_id)
-
+        
         # Show tweet URL
         tweet_url = f"https://x.com/user/status/{response.data['id']}"
         print(f"\nView your tweet: {tweet_url}")
-
+        
     except Exception as e:
         print(f"\nError posting tweet: {e}")
         print("Your progress was NOT saved.")
@@ -111,23 +111,23 @@ def post_solution(gist_url, problem_name):
 
 def main():
     """Main function"""
-    print("\n" + "=" * 50)
+    print("\n" + "="*50)
     print("LEETCODE X POSTER")
-    print("=" * 50 + "\n")
-
+    print("="*50 + "\n")
+    
     # Get input from user
     gist_url = input("Enter Gist URL: ").strip()
-
+    
     if not gist_url:
         print("Error: Gist URL cannot be empty")
         return
-
+    
     problem_name = input("Enter Problem Name: ").strip()
-
+    
     if not problem_name:
         print("Error: Problem name cannot be empty")
         return
-
+    
     # Post the solution
     post_solution(gist_url, problem_name)
 
