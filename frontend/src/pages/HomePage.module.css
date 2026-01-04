@@ -1,0 +1,40 @@
+.welcomeCard {
+  background: linear-gradient(
+    135deg,
+    light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-7)),
+    light-dark(var(--mantine-color-cyan-0), var(--mantine-color-dark-6))
+  );
+}
+
+.statCard {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+.statValue {
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--mantine-color-blue-6), var(--mantine-color-cyan-6));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.actionCard {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--mantine-shadow-md);
+    border-color: var(--mantine-color-blue-4);
+  }
+}
+
+@media (max-width: 48em) {
+  .statValue {
+    font-size: 1.5rem;
+  }
+}

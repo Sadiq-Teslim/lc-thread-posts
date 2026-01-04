@@ -1,0 +1,18 @@
+.successCard {
+  background: linear-gradient(
+    135deg,
+    light-dark(var(--mantine-color-grape-0), var(--mantine-color-dark-7)),
+    light-dark(var(--mantine-color-pink-0), var(--mantine-color-dark-6))
+  );
+}
+
+.previewBox {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7));
+  min-height: 120px;
+}
+
+@media (max-width: 62em) {
+  :global(.mantine-Group-root[data-grow]) {
+    flex-direction: column;
+  }
+}

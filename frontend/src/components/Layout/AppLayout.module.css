@@ -1,0 +1,91 @@
+.header {
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--mantine-color-blue-6), var(--mantine-color-cyan-6));
+  border-radius: var(--mantine-radius-md);
+}
+
+.logoText {
+  background: linear-gradient(135deg, var(--mantine-color-blue-6), var(--mantine-color-cyan-6));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.navbar {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7));
+  border-right: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+.navLink {
+  transition: all 150ms ease;
+  
+  &:hover {
+    background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+  }
+  
+  &[data-active] {
+    background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6));
+    color: var(--mantine-color-blue-6);
+    
+    &:hover {
+      background: light-dark(var(--mantine-color-blue-1), var(--mantine-color-dark-5));
+    }
+  }
+}
+
+.userButton {
+  display: flex;
+  align-items: center;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-md);
+  transition: background 150ms ease;
+  
+  &:hover {
+    background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+  }
+}
+
+.statsCard {
+  padding: var(--mantine-spacing-md);
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-6));
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+.main {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+  min-height: calc(100vh - 60px);
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--mantine-spacing-md);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 48em) {
+  .content {
+    padding: var(--mantine-spacing-sm);
+  }
+}
