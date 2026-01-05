@@ -43,13 +43,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__, static_folder=None)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 
-# Configure CORS
-# In production, set ALLOWED_ORIGINS env var to comma-separated list of frontend URLs
-# For example: ALLOWED_ORIGINS=https://example.com,https://www.example.com
+
 cors_origins = Config.get_cors_origins()
 CORS(app, supports_credentials=True, origins=cors_origins if cors_origins else "*")
 
-# Serve frontend static files in production (optional)
+
 if Config.FRONTEND_DIST_PATH.exists():
     app.static_folder = str(Config.FRONTEND_DIST_PATH)
 
@@ -265,7 +263,7 @@ def validate_session() -> Tuple[Dict[str, Any], int]:
                     "message": "No active session found. Please configure your API keys.",
                 }
             ),
-            200,  # Not an error, just invalid session
+            200,  
         )
 
     session = session_manager.get_session(session_id)
@@ -877,9 +875,6 @@ def server_error(e) -> Tuple[Dict[str, Any], int]:
 
 # ============== STATIC FILE SERVING ==============
 
-
-# Serve frontend static files (for combined deployment)
-# IMPORTANT: This must be last so API routes are matched first
 if Config.FRONTEND_DIST_PATH.exists():
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
