@@ -494,46 +494,352 @@ TWITTER_BEARER_TOKEN=your_bearer_token_here`}
           <Accordion variant="separated">
             <Accordion.Item value="how-to-get-keys">
               <Accordion.Control icon={<IconInfoCircle size={20} />}>
-                How to get your API keys
+                How to get your API keys - Detailed Guide
               </Accordion.Control>
               <Accordion.Panel>
-                <Stack gap="md">
-                  <List spacing="sm" size="sm">
-                    <List.Item>
-                      Go to the{" "}
-                      <Anchor
-                        href="https://developer.twitter.com/en/portal/dashboard"
-                        target="_blank"
-                      >
-                        Twitter Developer Portal
-                      </Anchor>
-                    </List.Item>
-                    <List.Item>
-                      Create a new project and app if you haven't already
-                    </List.Item>
-                    <List.Item>
-                      Navigate to your app's "Keys and tokens" section
-                    </List.Item>
-                    <List.Item>
-                      Generate and copy your API Key, API Secret, Access Token,
-                      and Access Token Secret
-                    </List.Item>
-                    <List.Item>
-                      Make sure your app has <strong>Read and Write</strong>{" "}
-                      permissions
-                    </List.Item>
-                  </List>
+                <Stack gap="lg">
+                  <Text size="sm" c="dimmed">
+                    Follow these detailed steps to obtain your X/Twitter API
+                    credentials. You'll need all five keys to use ThreadCraft.
+                  </Text>
 
+                  {/* Step 1 */}
+                  <Box>
+                    <Group gap="xs" mb="xs">
+                      <Badge size="lg" variant="filled" color="blue">
+                        Step 1
+                      </Badge>
+                      <Text fw={600} size="sm">
+                        Create a Twitter Developer Account
+                      </Text>
+                    </Group>
+                    <List spacing="xs" size="sm" ml="xl">
+                      <List.Item>
+                        Visit the{" "}
+                        <Anchor
+                          href="https://developer.twitter.com/en/portal/dashboard"
+                          target="_blank"
+                        >
+                          Twitter Developer Portal{" "}
+                          <IconExternalLink size={12} />
+                        </Anchor>
+                      </List.Item>
+                      <List.Item>
+                        Sign in with your X/Twitter account (or create one if
+                        you don't have one)
+                      </List.Item>
+                      <List.Item>
+                        Apply for a Developer Account if you haven't already
+                        (usually approved within a few minutes)
+                      </List.Item>
+                      <List.Item>
+                        Accept the Developer Terms and complete the application
+                        form
+                      </List.Item>
+                    </List>
+                  </Box>
+
+                  {/* Step 2 */}
+                  <Box>
+                    <Group gap="xs" mb="xs">
+                      <Badge size="lg" variant="filled" color="blue">
+                        Step 2
+                      </Badge>
+                      <Text fw={600} size="sm">
+                        Create a New Project and App
+                      </Text>
+                    </Group>
+                    <List spacing="xs" size="sm" ml="xl">
+                      <List.Item>
+                        Click the{" "}
+                        <strong>"Create Project"</strong> button (or use an
+                        existing project)
+                      </List.Item>
+                      <List.Item>
+                        Fill in your project details:
+                        <List withPadding spacing="xs" size="sm" mt="xs">
+                          <List.Item>
+                            <strong>Project name:</strong> e.g., "ThreadCraft"
+                            or "My Thread Poster"
+                          </List.Item>
+                          <List.Item>
+                            <strong>Use case:</strong> Select "Making bots" or
+                            "Exploring the API"
+                          </List.Item>
+                          <List.Item>
+                            <strong>Description:</strong> Briefly describe your
+                            project
+                          </List.Item>
+                        </List>
+                      </List.Item>
+                      <List.Item>
+                        Create an App within your project:
+                        <List withPadding spacing="xs" size="sm" mt="xs">
+                          <List.Item>
+                            Click <strong>"Create App"</strong> or{" "}
+                            <strong>"Add App"</strong>
+                          </List.Item>
+                          <List.Item>
+                            Give your app a name (can be the same as your
+                            project)
+                          </List.Item>
+                          <List.Item>
+                            Click <strong>"Create"</strong> to finish
+                          </List.Item>
+                        </List>
+                      </List.Item>
+                    </List>
+                  </Box>
+
+                  {/* Step 3 */}
+                  <Box>
+                    <Group gap="xs" mb="xs">
+                      <Badge size="lg" variant="filled" color="blue">
+                        Step 3
+                      </Badge>
+                      <Text fw={600} size="sm">
+                        Configure App Permissions
+                      </Text>
+                    </Group>
+                    <List spacing="xs" size="sm" ml="xl">
+                      <List.Item>
+                        Navigate to your app's <strong>"Settings"</strong> tab
+                      </List.Item>
+                      <List.Item>
+                        Scroll to <strong>"User authentication settings"</strong>{" "}
+                        section
+                      </List.Item>
+                      <List.Item>
+                        Click <strong>"Set up"</strong> or{" "}
+                        <strong>"Edit"</strong>
+                      </List.Item>
+                      <List.Item>
+                        Configure the following settings:
+                        <List withPadding spacing="xs" size="sm" mt="xs">
+                          <List.Item>
+                            <strong>App permissions:</strong> Select{" "}
+                            <strong>"Read and write"</strong> (required for
+                            posting tweets)
+                          </List.Item>
+                          <List.Item>
+                            <strong>Type of App:</strong> Select "Web App, Automated App or Bot"
+                          </List.Item>
+                          <List.Item>
+                            <strong>Callback URI / Redirect URL:</strong> You can
+                            use{" "}
+                            <code style={{ fontSize: "0.85em" }}>
+                              http://localhost
+                            </code>{" "}
+                            or leave blank for this use case
+                          </List.Item>
+                          <List.Item>
+                            <strong>Website URL:</strong> Enter any valid URL
+                            (can be your GitHub repo or personal website)
+                          </List.Item>
+                        </List>
+                      </List.Item>
+                      <List.Item>
+                        Click <strong>"Save"</strong> to apply changes
+                      </List.Item>
+                    </List>
+                  </Box>
+
+                  {/* Step 4 */}
+                  <Box>
+                    <Group gap="xs" mb="xs">
+                      <Badge size="lg" variant="filled" color="blue">
+                        Step 4
+                      </Badge>
+                      <Text fw={600} size="sm">
+                        Get Your API Keys and Tokens
+                      </Text>
+                    </Group>
+                    <List spacing="xs" size="sm" ml="xl">
+                      <List.Item>
+                        Navigate to the <strong>"Keys and tokens"</strong> tab
+                        in your app dashboard
+                      </List.Item>
+                      <List.Item>
+                        You'll find several keys. Here's what you need:
+                      </List.Item>
+                    </List>
+
+                    <Card withBorder p="md" mt="md" ml="xl" bg="dark.9">
+                      <Stack gap="xs">
+                        <Group gap="xs">
+                          <IconKey size={16} />
+                          <Text size="sm" fw={600}>
+                            API Key (Consumer Key)
+                          </Text>
+                        </Group>
+                        <Text size="xs" c="dimmed" ml="xl">
+                          Already visible in the "Consumer Keys" section. Click
+                          the copy icon or reveal it if hidden.
+                        </Text>
+
+                        <Divider my="xs" />
+
+                        <Group gap="xs">
+                          <IconLock size={16} />
+                          <Text size="sm" fw={600}>
+                            API Secret (Consumer Secret)
+                          </Text>
+                        </Group>
+                        <Text size="xs" c="dimmed" ml="xl">
+                          Click <strong>"Regenerate"</strong> or{" "}
+                          <strong>"Create"</strong> if not visible.{" "}
+                          <strong>Important:</strong> Copy this immediately - you
+                          won't be able to see it again!
+                        </Text>
+
+                        <Divider my="xs" />
+
+                        <Group gap="xs">
+                          <IconKey size={16} />
+                          <Text size="sm" fw={600}>
+                            Access Token & Access Token Secret
+                          </Text>
+                        </Group>
+                        <Text size="xs" c="dimmed" ml="xl">
+                          Scroll to <strong>"Access Token and Secret"</strong>{" "}
+                          section. Click <strong>"Generate"</strong> or{" "}
+                          <strong>"Regenerate"</strong> if needed. Copy both the
+                          Access Token and Access Token Secret. These are
+                          generated as a pair.
+                        </Text>
+
+                        <Divider my="xs" />
+
+                        <Group gap="xs">
+                          <IconKey size={16} />
+                          <Text size="sm" fw={600}>
+                            Bearer Token
+                          </Text>
+                        </Group>
+                        <Text size="xs" c="dimmed" ml="xl">
+                          In the same "Keys and tokens" page, look for{" "}
+                          <strong>"Bearer Token"</strong>. Click{" "}
+                          <strong>"Regenerate"</strong> or copy the existing one
+                          if available. This token starts with "AAAAA..."
+                        </Text>
+                      </Stack>
+                    </Card>
+                  </Box>
+
+                  {/* Step 5 */}
+                  <Box>
+                    <Group gap="xs" mb="xs">
+                      <Badge size="lg" variant="filled" color="blue">
+                        Step 5
+                      </Badge>
+                      <Text fw={600} size="sm">
+                        Verify Access Level
+                      </Text>
+                    </Group>
+                    <List spacing="xs" size="sm" ml="xl">
+                      <List.Item>
+                        Check your account's access level in the Developer Portal
+                        dashboard
+                      </List.Item>
+                      <List.Item>
+                        For posting tweets, you need at least{" "}
+                        <strong>"Elevated"</strong> access
+                      </List.Item>
+                      <List.Item>
+                        If you have "Essential" access, you can upgrade by:
+                        <List withPadding spacing="xs" size="sm" mt="xs">
+                          <List.Item>
+                            Going to the <strong>"Products"</strong> tab
+                          </List.Item>
+                          <List.Item>
+                            Selecting <strong>"Twitter API v2"</strong>
+                          </List.Item>
+                          <List.Item>
+                            Clicking <strong>"Upgrade"</strong> and following the
+                            prompts
+                          </List.Item>
+                          <List.Item>
+                            Elevated access is free but requires providing
+                            additional use case information
+                          </List.Item>
+                        </List>
+                      </List.Item>
+                    </List>
+                  </Box>
+
+                  {/* Important Alerts */}
                   <Alert
                     icon={<IconAlertTriangle size={16} />}
-                    title="Important"
+                    title="Important Notes"
                     color="yellow"
                     variant="light"
                   >
-                    Make sure your Twitter Developer account has{" "}
-                    <strong>Elevated access</strong> or higher to post tweets
-                    via the API.
+                    <Stack gap="xs">
+                      <Text size="sm">
+                        <strong>Access Level:</strong> Make sure your Twitter
+                        Developer account has <strong>Elevated access</strong>{" "}
+                        or higher to post tweets via the API. Essential access
+                        only allows read operations.
+                      </Text>
+                      <Text size="sm">
+                        <strong>Rate Limits:</strong> Elevated access provides
+                        10,000 tweets per month and higher rate limits for API
+                        requests.
+                      </Text>
+                      <Text size="sm">
+                        <strong>Security:</strong> Keep your keys secure! Never
+                        share them publicly or commit them to version control.
+                        If compromised, regenerate them immediately.
+                      </Text>
+                    </Stack>
                   </Alert>
+
+                  <Alert
+                    icon={<IconInfoCircle size={16} />}
+                    title="Quick Copy Tips"
+                    color="blue"
+                    variant="light"
+                  >
+                    <List spacing="xs" size="sm">
+                      <List.Item>
+                        Use the copy buttons next to each key in the Developer
+                        Portal for accurate copying
+                      </List.Item>
+                      <List.Item>
+                        If you accidentally reveal a secret, regenerate it
+                        immediately for security
+                      </List.Item>
+                      <List.Item>
+                        You can paste all keys at once using the{" "}
+                        <strong>"Import from .env"</strong> button above
+                      </List.Item>
+                    </List>
+                  </Alert>
+
+                  <Box>
+                    <Text size="sm" fw={600} mb="xs">
+                      Still having trouble?
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      Check out the{" "}
+                      <Anchor
+                        href="https://developer.twitter.com/en/docs/tutorials/getting-started-with-the-twitter-api-v2-for-academic-research"
+                        target="_blank"
+                      >
+                        official Twitter API documentation{" "}
+                        <IconExternalLink size={12} />
+                      </Anchor>{" "}
+                      or{" "}
+                      <Anchor
+                        href="https://developer.twitter.com/en/support"
+                        target="_blank"
+                      >
+                        contact Twitter Developer Support{" "}
+                        <IconExternalLink size={12} />
+                      </Anchor>
+                      .
+                    </Text>
+                  </Box>
                 </Stack>
               </Accordion.Panel>
             </Accordion.Item>

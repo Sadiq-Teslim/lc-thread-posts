@@ -1,77 +1,95 @@
 """
-Flask API Backend for ThreadCraft
-Secure, production-ready API that bridges frontend to Twitter/X functionality
+Flask API Backend for ThreadCraft.
+
+A production-ready REST API that bridges the frontend to Twitter/X functionality,
+providing secure session management, credential encryption, and thread posting capabilities.
+
+This module serves as the main entry point for the Flask application and defines
+all API endpoints, middleware, and request handlers.
 """
+
+import logging
+import os
+from datetime import datetime
+from functools import wraps
+from typing import Dict, Any, Tuple, Callable
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from functools import wraps
-import tweepy
-import json
-import os
-import hashlib
-import secrets
-from datetime import datetime, timedelta
-from cryptography.fernet import Fernet
-import base64
 
+from config import Config
+from constants import (
+    MAX_TWEET_LENGTH,
+    REQUIRED_CREDENTIAL_FIELDS,
+    SESSION_EXPIRY_HOURS,
+    MAX_REPLIES_TO_FETCH,
+)
+from errors import friendly_error_message
+from session_manager import session_manager
+from progress_manager import progress_manager
+from twitter_client import TwitterClientManager
+from utils import (
+    extract_thread_id_from_url,
+    extract_day_from_text,
+    validate_tweet_length,
+    validate_thread_id,
+)
+
+# Configure logging
+Config.setup_logging()
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
 app = Flask(__name__, static_folder=None)
+app.config["SECRET_KEY"] = Config.SECRET_KEY
+
 # Configure CORS
 # In production, set ALLOWED_ORIGINS env var to comma-separated list of frontend URLs
 # For example: ALLOWED_ORIGINS=https://example.com,https://www.example.com
-allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else None
-CORS(app, supports_credentials=True, origins=allowed_origins if allowed_origins else "*")
+cors_origins = Config.get_cors_origins()
+CORS(app, supports_credentials=True, origins=cors_origins if cors_origins else "*")
 
 # Serve frontend static files in production (optional)
-FRONTEND_DIST_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)), "frontend", "dist"
-)
-if os.path.exists(FRONTEND_DIST_PATH):
-    app.static_folder = FRONTEND_DIST_PATH
-
-# Configuration
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
-PROGRESS_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)), "progress.json"
-)
-
-# In-memory session storage (in production, use Redis or database)
-active_sessions = {}
+if Config.FRONTEND_DIST_PATH.exists():
+    app.static_folder = str(Config.FRONTEND_DIST_PATH)
 
 
-def generate_encryption_key(session_id: str) -> bytes:
-    """Generate a Fernet encryption key from session ID"""
-    key = hashlib.sha256(session_id.encode()).digest()
-    return base64.urlsafe_b64encode(key)
+# ============== MIDDLEWARE & DECORATORS ==============
 
 
-def encrypt_credentials(credentials: dict, session_id: str) -> str:
-    """Encrypt credentials for secure storage"""
-    key = generate_encryption_key(session_id)
-    f = Fernet(key)
-    return f.encrypt(json.dumps(credentials).encode()).decode()
+def get_session_id() -> str | None:
+    """
+    Extract session ID from request headers.
 
-
-def decrypt_credentials(encrypted_data: str, session_id: str) -> dict:
-    """Decrypt credentials"""
-    key = generate_encryption_key(session_id)
-    f = Fernet(key)
-    return json.loads(f.decrypt(encrypted_data.encode()).decode())
-
-
-def get_session_id():
-    """Get session ID from request header"""
+    Returns:
+        Session ID string if present, None otherwise.
+    """
     return request.headers.get("X-Session-ID")
 
 
-def require_credentials(f):
-    """Decorator to require valid credentials for API endpoints"""
+def require_credentials(f: Callable) -> Callable:
+    """
+    Decorator to require valid credentials for API endpoints.
+
+    This decorator:
+    1. Extracts the session ID from request headers
+    2. Validates the session exists and is not expired
+    3. Decrypts and attaches credentials to the request object
+    4. Returns appropriate error responses if validation fails
+
+    Args:
+        f: The Flask route function to protect.
+
+    Returns:
+        Decorated function that validates credentials before execution.
+    """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
         session_id = get_session_id()
 
         if not session_id:
+            logger.warning("Request missing session ID")
             return (
                 jsonify(
                     {
@@ -83,23 +101,9 @@ def require_credentials(f):
                 401,
             )
 
-        if session_id not in active_sessions:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error_code": "SESSION_EXPIRED",
-                        "message": "Your session has expired. Please reconfigure your API keys.",
-                    }
-                ),
-                401,
-            )
-
-        session = active_sessions[session_id]
-
-        # Check session expiry (24 hours)
-        if datetime.now() > session["expires_at"]:
-            del active_sessions[session_id]
+        session = session_manager.get_session(session_id)
+        if not session:
+            logger.warning(f"Invalid or expired session: {session_id[:8] if session_id else 'None'}...")
             return (
                 jsonify(
                     {
@@ -112,11 +116,22 @@ def require_credentials(f):
             )
 
         try:
-            credentials = decrypt_credentials(
-                session["encrypted_credentials"], session_id
-            )
+            credentials = session_manager.get_credentials(session_id)
+            if not credentials:
+                logger.error(f"Failed to decrypt credentials for session: {session_id[:8]}...")
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error_code": "INVALID_CREDENTIALS",
+                            "message": "Unable to decrypt your credentials. Please reconfigure your API keys.",
+                        }
+                    ),
+                    401,
+                )
             request.twitter_credentials = credentials
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error decrypting credentials: {e}")
             return (
                 jsonify(
                     {
@@ -133,99 +148,56 @@ def require_credentials(f):
     return decorated_function
 
 
-def get_twitter_client(credentials: dict):
-    """Create Twitter client with provided credentials"""
-    return tweepy.Client(
-        bearer_token=credentials.get("bearer_token"),
-        consumer_key=credentials.get("api_key"),
-        consumer_secret=credentials.get("api_secret"),
-        access_token=credentials.get("access_token"),
-        access_token_secret=credentials.get("access_token_secret"),
-    )
-
-
-def load_progress():
-    """Load progress from JSON file"""
-    try:
-        with open(PROGRESS_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"day": 0, "thread_id": None}
-
-
-def save_progress(day: int, thread_id: str):
-    """Save progress to JSON file"""
-    with open(PROGRESS_FILE, "w") as f:
-        json.dump({"day": day, "thread_id": thread_id}, f, indent=2)
-
-
-def friendly_error_message(error: Exception) -> tuple:
-    """Convert technical errors to user-friendly messages"""
-    error_str = str(error).lower()
-
-    if "unauthorized" in error_str or "401" in error_str:
-        return (
-            "AUTHENTICATION_FAILED",
-            "Your X/Twitter API credentials appear to be invalid. Please check your API keys in settings.",
-        )
-    elif "forbidden" in error_str or "403" in error_str:
-        return (
-            "PERMISSION_DENIED",
-            "Your X/Twitter account does not have permission for this action. Please check your app permissions on the Twitter Developer Portal.",
-        )
-    elif "rate limit" in error_str or "429" in error_str:
-        return (
-            "RATE_LIMITED",
-            "You've hit the X/Twitter rate limit. Please wait a few minutes before trying again.",
-        )
-    elif "duplicate" in error_str:
-        return (
-            "DUPLICATE_TWEET",
-            "This tweet appears to be a duplicate. Please modify your content and try again.",
-        )
-    elif "too long" in error_str or "character" in error_str:
-        return (
-            "TWEET_TOO_LONG",
-            "Your tweet is too long. Please shorten it to 280 characters or less.",
-        )
-    elif "connection" in error_str or "timeout" in error_str:
-        return (
-            "CONNECTION_ERROR",
-            "Unable to connect to X/Twitter. Please check your internet connection and try again.",
-        )
-    else:
-        return (
-            "UNKNOWN_ERROR",
-            "Something went wrong while posting. Please try again or check your settings.",
-        )
-
-
 # ============== API ENDPOINTS ==============
 
 
 @app.route("/api/health", methods=["GET"])
-def health_check():
-    """Health check endpoint"""
-    return jsonify(
-        {"success": True, "status": "healthy", "timestamp": datetime.now().isoformat()}
+def health_check() -> Tuple[Dict[str, Any], int]:
+    """
+    Health check endpoint for monitoring and load balancers.
+
+    Returns:
+        JSON response with server status and timestamp.
+    """
+    return (
+        jsonify(
+            {
+                "success": True,
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+            }
+        ),
+        200,
     )
 
 
 @app.route("/api/session/create", methods=["POST"])
-def create_session():
-    """Create a new session and store encrypted credentials"""
-    data = request.get_json()
+def create_session() -> Tuple[Dict[str, Any], int]:
+    """
+    Create a new session and store encrypted credentials.
 
-    required_fields = [
-        "api_key",
-        "api_secret",
-        "access_token",
-        "access_token_secret",
-        "bearer_token",
+    Validates Twitter API credentials by attempting authentication,
+    then creates an encrypted session that expires after 24 hours.
+
+    Request Body:
+        - api_key: Twitter API key (consumer key)
+        - api_secret: Twitter API secret (consumer secret)
+        - access_token: Twitter access token
+        - access_token_secret: Twitter access token secret
+        - bearer_token: Twitter bearer token
+
+    Returns:
+        JSON response with session_id and expiry information on success,
+        or error details on failure.
+    """
+    data = request.get_json() or {}
+
+    # Validate required fields
+    missing_fields = [
+        field for field in REQUIRED_CREDENTIAL_FIELDS if not data.get(field)
     ]
-    missing_fields = [f for f in required_fields if not data.get(f)]
-
     if missing_fields:
+        logger.warning(f"Session creation failed: missing fields {missing_fields}")
         return (
             jsonify(
                 {
@@ -238,129 +210,203 @@ def create_session():
         )
 
     # Validate credentials by attempting to connect
-    try:
-        client = get_twitter_client(data)
-        # Try to get authenticated user to validate credentials
-        client.get_me()
-    except Exception as e:
-        error_code, message = friendly_error_message(e)
+    is_valid, validation_error = TwitterClientManager.validate_credentials(data)
+    if not is_valid:
+        logger.warning(f"Credential validation failed: {validation_error}")
+        error_code, message = friendly_error_message(
+            Exception(validation_error or "Invalid credentials")
+        )
         return (
             jsonify({"success": False, "error_code": error_code, "message": message}),
             400,
         )
 
-    # Generate session ID
-    session_id = secrets.token_urlsafe(32)
+    try:
+        # Create session
+        session_id = session_manager.create_session(data)
+        logger.info(f"Session created successfully: {session_id[:8]}...")
 
-    # Encrypt and store credentials
-    encrypted_creds = encrypt_credentials(data, session_id)
-
-    active_sessions[session_id] = {
-        "encrypted_credentials": encrypted_creds,
-        "created_at": datetime.now(),
-        "expires_at": datetime.now() + timedelta(hours=24),
-    }
-
-    return jsonify(
-        {
-            "success": True,
-            "session_id": session_id,
-            "message": "Successfully connected to X/Twitter! You can now start posting.",
-            "expires_in": 86400,  # 24 hours in seconds
-        }
-    )
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "session_id": session_id,
+                    "message": "Successfully connected to X/Twitter! You can now start posting.",
+                    "expires_in": SESSION_EXPIRY_HOURS * 3600,  # Convert hours to seconds
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Failed to create session: {e}")
+        error_code, message = friendly_error_message(e)
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
 
 
 @app.route("/api/session/validate", methods=["GET"])
-def validate_session():
-    """Validate if current session is still active"""
+def validate_session() -> Tuple[Dict[str, Any], int]:
+    """
+    Validate if current session is still active.
+
+    Returns:
+        JSON response indicating session validity and expiry information.
+    """
     session_id = get_session_id()
 
-    if not session_id or session_id not in active_sessions:
-        return jsonify(
-            {
-                "success": False,
-                "valid": False,
-                "message": "No active session found. Please configure your API keys.",
-            }
+    if not session_id:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "valid": False,
+                    "message": "No active session found. Please configure your API keys.",
+                }
+            ),
+            200,  # Not an error, just invalid session
         )
 
-    session = active_sessions[session_id]
-
-    if datetime.now() > session["expires_at"]:
-        del active_sessions[session_id]
-        return jsonify(
-            {
-                "success": False,
-                "valid": False,
-                "message": "Your session has expired. Please reconfigure your API keys.",
-            }
+    session = session_manager.get_session(session_id)
+    if not session:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "valid": False,
+                    "message": "Your session has expired. Please reconfigure your API keys.",
+                }
+            ),
+            200,  # Not an error, just expired session
         )
 
-    return jsonify(
-        {
-            "success": True,
-            "valid": True,
-            "expires_at": session["expires_at"].isoformat(),
-            "message": "Session is active.",
-        }
+    return (
+        jsonify(
+            {
+                "success": True,
+                "valid": True,
+                "expires_at": session["expires_at"].isoformat(),
+                "message": "Session is active.",
+            }
+        ),
+        200,
     )
 
 
 @app.route("/api/session/destroy", methods=["DELETE"])
-def destroy_session():
-    """Destroy current session (logout)"""
+def destroy_session() -> Tuple[Dict[str, Any], int]:
+    """
+    Destroy current session (logout).
+
+    Removes the session from storage, effectively logging out the user.
+
+    Returns:
+        JSON response confirming session destruction.
+    """
     session_id = get_session_id()
 
-    if session_id and session_id in active_sessions:
-        del active_sessions[session_id]
+    if session_id:
+        deleted = session_manager.delete_session(session_id)
+        if deleted:
+            logger.info(f"Session destroyed: {session_id[:8]}...")
 
-    return jsonify(
-        {
-            "success": True,
-            "message": "Session ended. Your credentials have been securely removed.",
-        }
+    return (
+        jsonify(
+            {
+                "success": True,
+                "message": "Session ended. Your credentials have been securely removed.",
+            }
+        ),
+        200,
     )
 
 
 @app.route("/api/progress", methods=["GET"])
 @require_credentials
-def get_progress():
-    """Get current posting progress"""
-    progress = load_progress()
-    return jsonify(
-        {
-            "success": True,
-            "data": {
-                "current_day": progress.get("day", 0),
-                "thread_id": progress.get("thread_id"),
-                "has_active_thread": progress.get("thread_id") is not None,
-                "next_day": progress.get("day", 0) + 1,
-            },
-        }
-    )
+def get_progress() -> Tuple[Dict[str, Any], int]:
+    """
+    Get current posting progress.
+
+    Returns the current day number and active thread ID if available.
+
+    Returns:
+        JSON response with progress data.
+    """
+    try:
+        progress = progress_manager.load()
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "data": {
+                        "current_day": progress.get("day", 0),
+                        "thread_id": progress.get("thread_id"),
+                        "has_active_thread": progress.get("thread_id") is not None,
+                        "next_day": progress.get("day", 0) + 1,
+                    },
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Failed to load progress: {e}")
+        error_code, message = friendly_error_message(e)
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
 
 
 @app.route("/api/progress/reset", methods=["POST"])
 @require_credentials
-def reset_progress():
-    """Reset progress to start a new thread"""
-    save_progress(0, None)
-    return jsonify(
-        {
-            "success": True,
-            "message": "Progress has been reset. You can now start a new thread.",
-        }
-    )
+def reset_progress() -> Tuple[Dict[str, Any], int]:
+    """
+    Reset progress to start a new thread.
+
+    Clears the current day counter and thread ID.
+
+    Returns:
+        JSON response confirming progress reset.
+    """
+    try:
+        progress_manager.reset()
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Progress has been reset. You can now start a new thread.",
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Failed to reset progress: {e}")
+        error_code, message = friendly_error_message(e)
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
 
 
 @app.route("/api/thread/start", methods=["POST"])
 @require_credentials
-def start_thread():
-    """Start a new thread with introduction tweet"""
-    data = request.get_json()
+def start_thread() -> Tuple[Dict[str, Any], int]:
+    """
+    Start a new thread with introduction tweet.
+
+    Creates the initial tweet that will serve as the root of the thread.
+
+    Request Body:
+        - intro_text: Introduction text for the thread (max 280 characters)
+
+    Returns:
+        JSON response with thread_id and tweet URL on success.
+    """
+    data = request.get_json() or {}
     intro_text = data.get("intro_text", "").strip()
 
+    # Validate input
     if not intro_text:
         return (
             jsonify(
@@ -373,38 +419,43 @@ def start_thread():
             400,
         )
 
-    if len(intro_text) > 280:
+    is_valid, error_msg = validate_tweet_length(intro_text, MAX_TWEET_LENGTH)
+    if not is_valid:
         return (
             jsonify(
                 {
                     "success": False,
                     "error_code": "TWEET_TOO_LONG",
-                    "message": f"Your introduction is {len(intro_text)} characters. Please keep it under 280 characters.",
+                    "message": error_msg or "Tweet exceeds maximum length.",
                 }
             ),
             400,
         )
 
     try:
-        client = get_twitter_client(request.twitter_credentials)
-
+        client = TwitterClientManager.create_client(request.twitter_credentials)
         response = client.create_tweet(text=intro_text, reply_settings="mentionedUsers")
 
-        thread_id = response.data["id"]
-        save_progress(0, thread_id)
+        thread_id = str(response.data["id"])
+        progress_manager.save(0, thread_id)
 
-        return jsonify(
-            {
-                "success": True,
-                "message": "Thread started successfully! You can now post Day 1.",
-                "data": {
-                    "thread_id": thread_id,
-                    "tweet_url": f"https://x.com/user/status/{thread_id}",
-                },
-            }
+        logger.info(f"Thread started: {thread_id}")
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Thread started successfully! You can now post Day 1.",
+                    "data": {
+                        "thread_id": thread_id,
+                        "tweet_url": f"https://x.com/user/status/{thread_id}",
+                    },
+                }
+            ),
+            200,
         )
-
     except Exception as e:
+        logger.error(f"Failed to start thread: {e}")
         error_code, message = friendly_error_message(e)
         return (
             jsonify({"success": False, "error_code": error_code, "message": message}),
@@ -414,47 +465,82 @@ def start_thread():
 
 @app.route("/api/thread/continue", methods=["POST"])
 @require_credentials
-def continue_thread():
-    """Continue an existing thread by thread ID or URL"""
-    data = request.get_json()
-    thread_input = data.get("thread_id", "").strip()
+def continue_thread() -> Tuple[Dict[str, Any], int]:
+    """
+    Continue an existing thread by thread ID or URL.
+
+    Validates the thread exists, belongs to the authenticated user,
+    and determines the current day of progress by analyzing replies.
+
+    Request Body:
+        - thread_id: Thread ID or Twitter/X thread URL
+
+    Returns:
+        JSON response with thread_id, current_day, and next_day on success.
+    """
+    data = request.get_json() or {}
+    # Accept both field names for compatibility
+    thread_input = data.get("thread_id_or_url") or data.get("thread_id") or ""
+    thread_input = thread_input.strip()
 
     if not thread_input:
         return (
             jsonify(
                 {
                     "success": False,
-                    "error_code": "MISSING_THREAD_ID",
-                    "message": "Please provide a thread ID or URL.",
+                    "error_code": "MISSING_THREAD_IDENTIFIER",
+                    "message": "Please provide a thread ID or URL to continue.",
                 }
             ),
             400,
         )
 
     # Extract thread ID from URL if provided
-    thread_id = thread_input
-    if "x.com" in thread_input or "twitter.com" in thread_input:
-        # Extract ID from URL like https://x.com/username/status/1234567890
-        parts = thread_input.split("/")
-        thread_id = parts[-1] if parts else thread_input
-        # Remove query params if any
-        thread_id = thread_id.split("?")[0]
+    thread_id = extract_thread_id_from_url(thread_input)
+    if not thread_id:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "INVALID_THREAD_URL",
+                    "message": "Invalid thread URL. Please provide a valid X/Twitter thread URL or thread ID.",
+                }
+            ),
+            400,
+        )
+
+    # Validate thread ID format
+    is_valid, error_msg = validate_thread_id(thread_id)
+    if not is_valid:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "INVALID_THREAD_ID",
+                    "message": error_msg or "Invalid thread ID format.",
+                }
+            ),
+            400,
+        )
 
     try:
-        client = get_twitter_client(request.twitter_credentials)
-        
+        client = TwitterClientManager.create_client(request.twitter_credentials)
+
         # Get authenticated user to verify ownership
         me = client.get_me()
-        user_id = me.data.id
+        user_id = str(me.data.id)
+        username = me.data.username
 
         # Get the thread tweet to verify it exists and belongs to user
         try:
             tweet = client.get_tweet(
                 id=thread_id,
-                tweet_fields=["author_id", "created_at", "public_metrics", "in_reply_to_user_id"]
+                tweet_fields=["author_id", "created_at", "public_metrics", "in_reply_to_user_id"],
             )
         except Exception as e:
-            if "not found" in str(e).lower() or "404" in str(e).lower():
+            error_str = str(e).lower()
+            if "not found" in error_str or "404" in error_str:
+                logger.warning(f"Thread not found: {thread_id}")
                 return (
                     jsonify(
                         {
@@ -468,7 +554,11 @@ def continue_thread():
             raise
 
         # Verify the thread belongs to the authenticated user
-        if str(tweet.data.author_id) != str(user_id):
+        tweet_author_id = str(tweet.data.author_id)
+        if tweet_author_id != user_id:
+            logger.warning(
+                f"Thread ownership mismatch: thread={thread_id}, user={user_id}, author={tweet_author_id}"
+            )
             return (
                 jsonify(
                     {
@@ -481,55 +571,58 @@ def continue_thread():
             )
 
         # Count replies in the thread to determine current day
-        # Get replies to the thread
-        day = 0  # Start at 0 if no replies found
+        day = 0
         try:
             # Get replies to the thread
             replies = client.search_recent_tweets(
-                query=f"conversation_id:{thread_id} from:{me.data.username}",
-                max_results=100,
-                tweet_fields=["created_at", "text"]
+                query=f"conversation_id:{thread_id} from:{username}",
+                max_results=MAX_REPLIES_TO_FETCH,
+                tweet_fields=["created_at", "text"],
             )
-            
+
             if replies.data:
-                # Filter for replies that follow the "Day X" pattern
-                day_patterns = []
+                # Extract day numbers from replies
+                day_numbers = []
                 for reply in replies.data:
                     text = reply.text or ""
-                    # Look for "Day X" pattern
-                    import re
-                    match = re.search(r'Day\s+(\d+)', text, re.IGNORECASE)
-                    if match:
-                        day_num = int(match.group(1))
-                        day_patterns.append(day_num)
-                
+                    day_num = extract_day_from_text(text)
+                    if day_num is not None:
+                        day_numbers.append(day_num)
+
                 # Use the highest day number found
-                if day_patterns:
-                    day = max(day_patterns)
+                if day_numbers:
+                    day = max(day_numbers)
+                    logger.debug(f"Found day numbers: {day_numbers}, using max: {day}")
                 else:
-                    # If no Day pattern found, count all replies
+                    # If no Day pattern found, count all replies as days
                     day = len(replies.data)
-        except Exception:
-            # If we can't fetch replies, assume day 0 and let user continue
-            day = 0
+                    logger.debug(f"No day pattern found, using reply count: {day}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch replies for thread {thread_id}: {e}")
+            # Continue with day 0 if we can't fetch replies
 
         # Save the thread ID and current day
-        save_progress(day, thread_id)
+        progress_manager.save(day, thread_id)
+        logger.info(f"Thread continued: {thread_id}, day={day}")
 
-        return jsonify(
-            {
-                "success": True,
-                "message": f"Thread resumed! Found {day} day(s) of progress. Ready to post Day {day + 1}.",
-                "data": {
-                    "thread_id": thread_id,
-                    "current_day": day,
-                    "next_day": day + 1,
-                    "tweet_url": f"https://x.com/user/status/{thread_id}",
-                },
-            }
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"Thread resumed! Found {day} day(s) of progress. Ready to post Day {day + 1}.",
+                    "data": {
+                        "thread_id": thread_id,
+                        "current_day": day,
+                        "next_day": day + 1,
+                        "tweet_url": f"https://x.com/{username}/status/{thread_id}",
+                    },
+                }
+            ),
+            200,
         )
 
     except Exception as e:
+        logger.error(f"Failed to continue thread: {e}")
         error_code, message = friendly_error_message(e)
         return (
             jsonify({"success": False, "error_code": error_code, "message": message}),
@@ -539,12 +632,25 @@ def continue_thread():
 
 @app.route("/api/solution/post", methods=["POST"])
 @require_credentials
-def post_solution():
-    """Post a LeetCode solution to the thread"""
-    data = request.get_json()
+def post_solution() -> Tuple[Dict[str, Any], int]:
+    """
+    Post a solution to the active thread.
+
+    Creates a reply tweet in the thread with the format:
+    "Day {day}\n\n{problem_name}\n\n{gist_url}"
+
+    Request Body:
+        - gist_url: GitHub Gist URL for the solution
+        - problem_name: Name of the LeetCode problem
+
+    Returns:
+        JSON response with tweet details on success.
+    """
+    data = request.get_json() or {}
     gist_url = data.get("gist_url", "").strip()
     problem_name = data.get("problem_name", "").strip()
 
+    # Validate input
     if not gist_url:
         return (
             jsonify(
@@ -569,7 +675,8 @@ def post_solution():
             400,
         )
 
-    progress = load_progress()
+    # Load progress
+    progress = progress_manager.load()
     thread_id = progress.get("thread_id")
 
     if not thread_id:
@@ -584,42 +691,51 @@ def post_solution():
             400,
         )
 
+    # Build tweet text
     day = progress.get("day", 0) + 1
     tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
 
-    if len(tweet_text) > 280:
+    # Validate tweet length
+    is_valid, error_msg = validate_tweet_length(tweet_text, MAX_TWEET_LENGTH)
+    if not is_valid:
         return (
             jsonify(
                 {
                     "success": False,
                     "error_code": "TWEET_TOO_LONG",
-                    "message": f"Your tweet is {len(tweet_text)} characters. Please shorten the problem name.",
+                    "message": error_msg or "Tweet exceeds maximum length.",
                 }
             ),
             400,
         )
 
     try:
-        client = get_twitter_client(request.twitter_credentials)
-
+        client = TwitterClientManager.create_client(request.twitter_credentials)
         response = client.create_tweet(text=tweet_text, in_reply_to_tweet_id=thread_id)
 
-        save_progress(day, thread_id)
+        tweet_id = str(response.data["id"])
+        progress_manager.save(day, thread_id)
 
-        return jsonify(
-            {
-                "success": True,
-                "message": f"Day {day} posted successfully!",
-                "data": {
-                    "day": day,
-                    "tweet_id": response.data["id"],
-                    "tweet_url": f'https://x.com/user/status/{response.data["id"]}',
-                    "tweet_text": tweet_text,
-                },
-            }
+        logger.info(f"Solution posted: day={day}, tweet_id={tweet_id}, thread={thread_id}")
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"Day {day} posted successfully!",
+                    "data": {
+                        "day": day,
+                        "tweet_id": tweet_id,
+                        "tweet_url": f"https://x.com/user/status/{tweet_id}",
+                        "tweet_text": tweet_text,
+                    },
+                }
+            ),
+            200,
         )
 
     except Exception as e:
+        logger.error(f"Failed to post solution: {e}")
         error_code, message = friendly_error_message(e)
         return (
             jsonify({"success": False, "error_code": error_code, "message": message}),
@@ -629,55 +745,78 @@ def post_solution():
 
 @app.route("/api/tweet/preview", methods=["POST"])
 @require_credentials
-def preview_tweet():
-    """Preview what the tweet will look like"""
-    data = request.get_json()
+def preview_tweet() -> Tuple[Dict[str, Any], int]:
+    """
+    Preview what the tweet will look like without posting.
+
+    Request Body:
+        - gist_url: GitHub Gist URL for the solution
+        - problem_name: Name of the LeetCode problem
+
+    Returns:
+        JSON response with tweet preview and validation info.
+    """
+    data = request.get_json() or {}
     gist_url = data.get("gist_url", "").strip()
     problem_name = data.get("problem_name", "").strip()
 
-    progress = load_progress()
+    progress = progress_manager.load()
     day = progress.get("day", 0) + 1
 
     tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
+    character_count = len(tweet_text)
+    is_valid = character_count <= MAX_TWEET_LENGTH
 
-    return jsonify(
-        {
-            "success": True,
-            "data": {
-                "preview": tweet_text,
-                "character_count": len(tweet_text),
-                "is_valid": len(tweet_text) <= 280,
-                "day": day,
-            },
-        }
+    return (
+        jsonify(
+            {
+                "success": True,
+                "data": {
+                    "preview": tweet_text,
+                    "character_count": character_count,
+                    "is_valid": is_valid,
+                    "day": day,
+                },
+            }
+        ),
+        200,
     )
 
 
 @app.route("/api/user/info", methods=["GET"])
 @require_credentials
-def get_user_info():
-    """Get authenticated user info"""
+def get_user_info() -> Tuple[Dict[str, Any], int]:
+    """
+    Get authenticated user information from Twitter.
+
+    Returns:
+        JSON response with user details (id, username, name, profile_image_url).
+    """
     try:
-        client = get_twitter_client(request.twitter_credentials)
+        client = TwitterClientManager.create_client(request.twitter_credentials)
         user = client.get_me(user_fields=["profile_image_url", "username", "name"])
 
-        return jsonify(
-            {
-                "success": True,
-                "data": {
-                    "id": user.data.id,
-                    "username": user.data.username,
-                    "name": user.data.name,
-                    "profile_image_url": (
-                        user.data.profile_image_url
-                        if hasattr(user.data, "profile_image_url")
-                        else None
-                    ),
-                },
-            }
+        profile_image_url = None
+        if hasattr(user.data, "profile_image_url") and user.data.profile_image_url:
+            profile_image_url = user.data.profile_image_url
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "data": {
+                        "id": str(user.data.id),
+                        "username": user.data.username,
+                        "name": user.data.name,
+                        "profile_image_url": profile_image_url,
+                    },
+                }
+            ),
+            200,
         )
 
     except Exception as e:
+        logger.error(f"Failed to get user info: {e}")
         error_code, message = friendly_error_message(e)
         return (
             jsonify({"success": False, "error_code": error_code, "message": message}),
@@ -685,9 +824,21 @@ def get_user_info():
         )
 
 
-# Error handlers
+# ============== ERROR HANDLERS ==============
+
+
 @app.errorhandler(404)
-def not_found(e):
+def not_found(e) -> Tuple[Dict[str, Any], int]:
+    """
+    Handle 404 Not Found errors.
+
+    Args:
+        e: The error object.
+
+    Returns:
+        JSON error response.
+    """
+    logger.debug(f"404 error: {request.path}")
     return (
         jsonify(
             {
@@ -701,7 +852,17 @@ def not_found(e):
 
 
 @app.errorhandler(500)
-def server_error(e):
+def server_error(e) -> Tuple[Dict[str, Any], int]:
+    """
+    Handle 500 Internal Server Error.
+
+    Args:
+        e: The error object.
+
+    Returns:
+        JSON error response.
+    """
+    logger.error(f"500 error: {e}")
     return (
         jsonify(
             {
@@ -714,31 +875,50 @@ def server_error(e):
     )
 
 
+# ============== STATIC FILE SERVING ==============
+
+
 # Serve frontend static files (for combined deployment)
 # IMPORTANT: This must be last so API routes are matched first
-if os.path.exists(FRONTEND_DIST_PATH):
+if Config.FRONTEND_DIST_PATH.exists():
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
-    def serve_frontend(path):
+    def serve_frontend(path: str):
+        """
+        Serve frontend static files.
+
+        Args:
+            path: Request path.
+
+        Returns:
+            Static file or index.html for SPA routing.
+        """
         # Don't serve frontend for API routes
         if path.startswith("api/"):
-            return jsonify({
-                "success": False,
-                "error_code": "NOT_FOUND",
-                "message": "The requested API resource was not found.",
-            }), 404
-        
-        if path != "" and os.path.exists(os.path.join(FRONTEND_DIST_PATH, path)):
-            return send_from_directory(FRONTEND_DIST_PATH, path)
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "NOT_FOUND",
+                        "message": "The requested API resource was not found.",
+                    }
+                ),
+                404,
+            )
+
+        if path and (Config.FRONTEND_DIST_PATH / path).exists():
+            return send_from_directory(str(Config.FRONTEND_DIST_PATH), path)
         else:
-            return send_from_directory(FRONTEND_DIST_PATH, "index.html")
+            return send_from_directory(str(Config.FRONTEND_DIST_PATH), "index.html")
+
+
+# ============== APPLICATION ENTRY POINT ==============
 
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("ThreadCraft API Server")
-    print("=" * 50)
-    port = int(os.environ.get("PORT", 5000))
-    debug = os.environ.get("FLASK_ENV") != "production"
-    print(f"Starting server on http://0.0.0.0:{port}")
-    app.run(debug=debug, host="0.0.0.0", port=port)
+    logger.info("=" * 50)
+    logger.info("ThreadCraft API Server")
+    logger.info("=" * 50)
+    logger.info(f"Starting server on http://0.0.0.0:{Config.PORT}")
+    logger.info(f"Debug mode: {Config.DEBUG}")
+    app.run(debug=Config.DEBUG, host="0.0.0.0", port=Config.PORT)
