@@ -95,7 +95,7 @@ export function HomePage() {
               <IconBrandTwitter size={40} />
             </ThemeIcon>
             <Title order={2} ta="center">
-              Welcome to LC Thread Poster
+              Welcome to ThreadCraft
             </Title>
             <Text c="dimmed" ta="center" maw={400}>
               Post your daily LeetCode solutions to X/Twitter automatically.

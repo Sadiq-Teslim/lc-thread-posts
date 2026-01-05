@@ -1,9 +1,9 @@
 """
-Flask API Backend for LeetCode Thread Poster
+Flask API Backend for ThreadCraft
 Secure, production-ready API that bridges frontend to Twitter/X functionality
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from functools import wraps
 import tweepy
@@ -15,8 +15,19 @@ from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 import base64
 
-app = Flask(__name__)
-CORS(app, supports_credentials=True)
+app = Flask(__name__, static_folder=None)
+# Configure CORS
+# In production, set ALLOWED_ORIGINS env var to comma-separated list of frontend URLs
+# For example: ALLOWED_ORIGINS=https://example.com,https://www.example.com
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else None
+CORS(app, supports_credentials=True, origins=allowed_origins if allowed_origins else "*")
+
+# Serve frontend static files in production (optional)
+FRONTEND_DIST_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "frontend", "dist"
+)
+if os.path.exists(FRONTEND_DIST_PATH):
+    app.static_folder = FRONTEND_DIST_PATH
 
 # Configuration
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
@@ -578,9 +589,22 @@ def server_error(e):
     )
 
 
+# Serve frontend static files (for combined deployment)
+if os.path.exists(FRONTEND_DIST_PATH):
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_frontend(path):
+        if path != "" and os.path.exists(os.path.join(FRONTEND_DIST_PATH, path)):
+            return send_from_directory(FRONTEND_DIST_PATH, path)
+        else:
+            return send_from_directory(FRONTEND_DIST_PATH, "index.html")
+
+
 if __name__ == "__main__":
     print("=" * 50)
-    print("LeetCode Thread Poster API Server")
+    print("ThreadCraft API Server")
     print("=" * 50)
-    print("Starting server on http://localhost:5000")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_ENV") != "production"
+    print(f"Starting server on http://0.0.0.0:{port}")
+    app.run(debug=debug, host="0.0.0.0", port=port)

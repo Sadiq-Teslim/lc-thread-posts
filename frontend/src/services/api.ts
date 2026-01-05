@@ -1,9 +1,12 @@
 import axios, { AxiosError } from "axios";
 import { useSessionStore } from "../store/sessionStore";
 
+// Get API URL from environment variable or use relative path
+const API_URL = (import.meta.env?.VITE_API_URL as string | undefined) || "/api";
+
 // Create axios instance
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: API_URL,
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",

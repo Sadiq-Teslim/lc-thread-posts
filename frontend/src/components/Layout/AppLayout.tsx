@@ -180,7 +180,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   className={classes.logoText}
                   visibleFrom="xs"
                 >
-                  LC Thread Poster
+                  ThreadCraft
                 </Text>
               </Group>
             </Link>

@@ -1,6 +1,6 @@
-# Contributing to LeetCode Thread Poster
+# Contributing to ThreadCraft
 
-Thank you for your interest in contributing to LeetCode Thread Poster! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to ThreadCraft! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 

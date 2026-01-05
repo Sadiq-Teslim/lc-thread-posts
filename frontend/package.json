@@ -1,8 +1,8 @@
 {
-  "name": "lc-thread-poster",
+  "name": "threadcraft",
   "version": "1.0.0",
   "private": true,
-  "description": "LeetCode Thread Poster - A beautiful UI for posting LeetCode solutions to X/Twitter",
+  "description": "ThreadCraft - Craft beautiful LeetCode solution threads for X/Twitter",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

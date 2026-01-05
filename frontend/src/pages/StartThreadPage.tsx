@@ -102,7 +102,7 @@ export function StartThreadPage() {
         toast.success({
           title: "Thread Started! 🚀",
           message:
-            "Your LeetCode thread has been created. Start posting Day 1!",
+            "Your thread has been created. Start posting Day 1!",
         });
 
         form.reset();
@@ -139,7 +139,7 @@ export function StartThreadPage() {
             </ThemeIcon>
             <Title order={2}>Thread Created! 🚀</Title>
             <Text c="dimmed" ta="center">
-              Your LeetCode thread has been started. Now you can begin posting
+              Your thread has been started. Now you can begin posting
               your daily solutions!
             </Text>
             <Group>
@@ -196,7 +196,7 @@ export function StartThreadPage() {
           <Text c="dimmed">
             {hasActiveThread
               ? "Reset your progress and begin a fresh LeetCode journey"
-              : "Create the introduction tweet for your LeetCode thread"}
+              : "Create the introduction tweet for your thread"}
           </Text>
         </Box>
 
