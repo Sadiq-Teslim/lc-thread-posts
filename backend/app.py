@@ -412,6 +412,131 @@ def start_thread():
         )
 
 
+@app.route("/api/thread/continue", methods=["POST"])
+@require_credentials
+def continue_thread():
+    """Continue an existing thread by thread ID or URL"""
+    data = request.get_json()
+    thread_input = data.get("thread_id", "").strip()
+
+    if not thread_input:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "MISSING_THREAD_ID",
+                    "message": "Please provide a thread ID or URL.",
+                }
+            ),
+            400,
+        )
+
+    # Extract thread ID from URL if provided
+    thread_id = thread_input
+    if "x.com" in thread_input or "twitter.com" in thread_input:
+        # Extract ID from URL like https://x.com/username/status/1234567890
+        parts = thread_input.split("/")
+        thread_id = parts[-1] if parts else thread_input
+        # Remove query params if any
+        thread_id = thread_id.split("?")[0]
+
+    try:
+        client = get_twitter_client(request.twitter_credentials)
+        
+        # Get authenticated user to verify ownership
+        me = client.get_me()
+        user_id = me.data.id
+
+        # Get the thread tweet to verify it exists and belongs to user
+        try:
+            tweet = client.get_tweet(
+                id=thread_id,
+                tweet_fields=["author_id", "created_at", "public_metrics", "in_reply_to_user_id"]
+            )
+        except Exception as e:
+            if "not found" in str(e).lower() or "404" in str(e).lower():
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error_code": "THREAD_NOT_FOUND",
+                            "message": "Thread not found. Please check the thread ID or URL.",
+                        }
+                    ),
+                    404,
+                )
+            raise
+
+        # Verify the thread belongs to the authenticated user
+        if str(tweet.data.author_id) != str(user_id):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "NOT_OWNER",
+                        "message": "This thread doesn't belong to your account. Please use a thread you created.",
+                    }
+                ),
+                403,
+            )
+
+        # Count replies in the thread to determine current day
+        # Get replies to the thread
+        day = 0  # Start at 0 if no replies found
+        try:
+            # Get replies to the thread
+            replies = client.search_recent_tweets(
+                query=f"conversation_id:{thread_id} from:{me.data.username}",
+                max_results=100,
+                tweet_fields=["created_at", "text"]
+            )
+            
+            if replies.data:
+                # Filter for replies that follow the "Day X" pattern
+                day_patterns = []
+                for reply in replies.data:
+                    text = reply.text or ""
+                    # Look for "Day X" pattern
+                    import re
+                    match = re.search(r'Day\s+(\d+)', text, re.IGNORECASE)
+                    if match:
+                        day_num = int(match.group(1))
+                        day_patterns.append(day_num)
+                
+                # Use the highest day number found
+                if day_patterns:
+                    day = max(day_patterns)
+                else:
+                    # If no Day pattern found, count all replies
+                    day = len(replies.data)
+        except Exception:
+            # If we can't fetch replies, assume day 0 and let user continue
+            day = 0
+
+        # Save the thread ID and current day
+        save_progress(day, thread_id)
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Thread resumed! Found {day} day(s) of progress. Ready to post Day {day + 1}.",
+                "data": {
+                    "thread_id": thread_id,
+                    "current_day": day,
+                    "next_day": day + 1,
+                    "tweet_url": f"https://x.com/user/status/{thread_id}",
+                },
+            }
+        )
+
+    except Exception as e:
+        error_code, message = friendly_error_message(e)
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
+
+
 @app.route("/api/solution/post", methods=["POST"])
 @require_credentials
 def post_solution():

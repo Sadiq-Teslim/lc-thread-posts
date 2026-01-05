@@ -160,6 +160,27 @@ export const apiService = {
     return response.data;
   },
 
+  async continueThread(threadId: string): Promise<
+    ApiResponse<{
+      thread_id: string;
+      current_day: number;
+      next_day: number;
+      tweet_url: string;
+    }>
+  > {
+    const response = await api.post<
+      ApiResponse<{
+        thread_id: string;
+        current_day: number;
+        next_day: number;
+        tweet_url: string;
+      }>
+    >("/thread/continue", {
+      thread_id: threadId,
+    });
+    return response.data;
+  },
+
   // Solution posting
   async postSolution(
     gistUrl: string,

@@ -17,6 +17,8 @@ import {
   Paper,
   Divider,
   Modal,
+  TextInput,
+  Tabs,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -28,6 +30,9 @@ import {
   IconExternalLink,
   IconArrowLeft,
   IconAlertTriangle,
+  IconRefresh,
+  IconLink,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { useProgressStore } from "../store/progressStore";
 import { apiService, getErrorMessage } from "../services/api";
@@ -48,6 +53,7 @@ export function StartThreadPage() {
     confirmModalOpened,
     { open: openConfirmModal, close: closeConfirmModal },
   ] = useDisclosure(false);
+  const [continueLoading, setContinueLoading] = useState(false);
 
   const form = useForm({
     initialValues: {
@@ -62,6 +68,58 @@ export function StartThreadPage() {
       },
     },
   });
+
+  const continueForm = useForm({
+    initialValues: {
+      thread_id: "",
+    },
+    validate: {
+      thread_id: (value) => {
+        if (!value.trim()) return "Thread ID or URL is required";
+        return null;
+      },
+    },
+  });
+
+  const handleContinueThread = async (values: { thread_id: string }) => {
+    setContinueLoading(true);
+
+    try {
+      const response = await apiService.continueThread(values.thread_id);
+
+      if (response.success && response.data) {
+        // Update progress store
+        const progressResponse = await apiService.getProgress();
+        if (progressResponse.success && progressResponse.data) {
+          setProgress(progressResponse.data);
+        }
+
+        toast.success({
+          title: "Thread Resumed! 🎉",
+          message: response.message || "You can now continue posting to your thread.",
+        });
+
+        continueForm.reset();
+
+        // Navigate to post solution page
+        navigate("/post");
+      } else {
+        toast.error({
+          title: "Failed to Continue Thread",
+          message:
+            response.message ||
+            "Unable to continue the thread. Please check the thread ID.",
+        });
+      }
+    } catch (error) {
+      toast.error({
+        title: "Failed to Continue Thread",
+        message: getErrorMessage(error),
+      });
+    } finally {
+      setContinueLoading(false);
+    }
+  };
 
   const charCount = form.values.intro_text.length;
   const isValidLength = charCount <= MAX_CHARS && charCount > 0;
@@ -216,20 +274,34 @@ export function StartThreadPage() {
           </Alert>
         )}
 
-        <Group align="flex-start" grow preventGrowOverflow={false}>
-          {/* Form */}
-          <Card withBorder p="xl" radius="lg" style={{ flex: 1 }}>
-            <form onSubmit={form.onSubmit(handleSubmit)}>
-              <Stack gap="lg">
-                <Textarea
-                  label="Introduction Tweet"
-                  description="This will be the first tweet in your thread"
-                  placeholder="e.g., A thread of my daily LeetCode submissions 🧵👇"
-                  minRows={4}
-                  maxRows={6}
-                  size="md"
-                  {...form.getInputProps("intro_text")}
-                />
+        {!hasActiveThread && (
+          <Group align="flex-start" grow preventGrowOverflow={false}>
+            <Card withBorder p="xl" radius="lg" style={{ flex: 1 }}>
+              <Tabs defaultValue="new">
+              <Tabs.List>
+                <Tabs.Tab value="new" leftSection={<IconPlus size={16} />}>
+                  Start New Thread
+                </Tabs.Tab>
+                <Tabs.Tab
+                  value="continue"
+                  leftSection={<IconRefresh size={16} />}
+                >
+                  Continue Existing Thread
+                </Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="new" pt="lg">
+                <form onSubmit={form.onSubmit(handleSubmit)}>
+                  <Stack gap="lg">
+                    <Textarea
+                      label="Introduction Tweet"
+                      description="This will be the first tweet in your thread"
+                      placeholder="e.g., A thread of my daily LeetCode submissions 🧵👇"
+                      minRows={4}
+                      maxRows={6}
+                      size="md"
+                      {...form.getInputProps("intro_text")}
+                    />
 
                 <Box>
                   <Group justify="space-between" mb="xs">
@@ -288,11 +360,175 @@ export function StartThreadPage() {
                 </Button>
               </Stack>
             </form>
-          </Card>
+              </Tabs.Panel>
 
-          {/* Preview */}
-          <Card withBorder p="xl" radius="lg" style={{ flex: 1 }}>
-            <Stack gap="md">
+              <Tabs.Panel value="continue" pt="lg">
+                <form
+                  onSubmit={continueForm.onSubmit(handleContinueThread)}
+                >
+                  <Stack gap="lg">
+                    <Alert
+                      icon={<IconInfoCircle size={16} />}
+                      title="Continue Your Existing Thread"
+                      color="blue"
+                      variant="light"
+                    >
+                      <Text size="sm">
+                        Enter your thread ID or URL to resume posting to an
+                        existing thread. The system will automatically detect
+                        how many days you've already posted.
+                      </Text>
+                    </Alert>
+
+                    <TextInput
+                      label="Thread ID or URL"
+                      description="Paste the thread ID (e.g., 1234567890) or full URL (e.g., https://x.com/username/status/1234567890)"
+                      placeholder="https://x.com/username/status/1234567890"
+                      leftSection={<IconLink size={16} />}
+                      {...continueForm.getInputProps("thread_id")}
+                    />
+
+                    <Button
+                      type="submit"
+                      loading={continueLoading}
+                      variant="gradient"
+                      gradient={{ from: "grape", to: "pink" }}
+                      size="lg"
+                      fullWidth
+                      leftSection={<IconRefresh size={16} />}
+                    >
+                      Continue Thread
+                    </Button>
+                  </Stack>
+                </form>
+              </Tabs.Panel>
+            </Tabs>
+            </Card>
+
+            {/* Preview */}
+            <Card withBorder p="xl" radius="lg" style={{ flex: 1 }}>
+              <Stack gap="md">
+                <Group gap="sm">
+                  <IconEye size={20} />
+                  <Text fw={600}>Tweet Preview</Text>
+                </Group>
+
+                <Divider />
+
+                {form.values.intro_text ? (
+                  <Paper
+                    withBorder
+                    p="md"
+                    radius="md"
+                    className={classes.previewBox}
+                  >
+                    <Text
+                      style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                    >
+                      {form.values.intro_text}
+                    </Text>
+                  </Paper>
+                ) : (
+                  <Box ta="center" py="xl">
+                    <Text c="dimmed">
+                      Enter your introduction text to see a preview
+                    </Text>
+                  </Box>
+                )}
+
+                <Alert
+                  icon={<IconAlertCircle size={16} />}
+                  variant="light"
+                  color="blue"
+                  title="What happens next?"
+                >
+                  <Text size="sm">
+                    After posting this introduction tweet, you'll be ready to post
+                    Day 1 of your LeetCode journey. Each subsequent post will
+                    automatically reply to this thread.
+                  </Text>
+                </Alert>
+              </Stack>
+            </Card>
+          </Group>
+        )}
+
+        {hasActiveThread && (
+          <Group align="flex-start" grow preventGrowOverflow={false}>
+            {/* Form */}
+            <Card withBorder p="xl" radius="lg" style={{ flex: 1 }}>
+              <form onSubmit={form.onSubmit(handleSubmit)}>
+                <Stack gap="lg">
+                  <Textarea
+                    label="Introduction Tweet"
+                    description="This will be the first tweet in your new thread"
+                    placeholder="e.g., A thread of my daily LeetCode submissions 🧵👇"
+                    minRows={4}
+                    maxRows={6}
+                    size="md"
+                    {...form.getInputProps("intro_text")}
+                  />
+
+                  <Box>
+                    <Group justify="space-between" mb="xs">
+                      <Text size="sm" c="dimmed">
+                        Character count
+                      </Text>
+                      <Badge
+                        color={
+                          isValidLength
+                            ? "green"
+                            : charCount === 0
+                            ? "gray"
+                            : "red"
+                        }
+                        variant="light"
+                      >
+                        {charCount} / {MAX_CHARS}
+                      </Badge>
+                    </Group>
+                    <Progress
+                      value={(charCount / MAX_CHARS) * 100}
+                      color={
+                        isValidLength ? "blue" : charCount === 0 ? "gray" : "red"
+                      }
+                      size="sm"
+                      radius="xl"
+                    />
+                  </Box>
+
+                  {charCount > MAX_CHARS && (
+                    <Alert
+                      icon={<IconAlertCircle size={16} />}
+                      color="red"
+                      variant="light"
+                    >
+                      Tweet exceeds 280 characters. Please shorten your
+                      introduction.
+                    </Alert>
+                  )}
+
+                  <Divider my="sm" />
+
+                  <Button
+                    type="submit"
+                    loading={loading}
+                    disabled={!isValidLength}
+                    variant="gradient"
+                    gradient={{ from: "grape", to: "pink" }}
+                    size="lg"
+                    fullWidth
+                    leftSection={<IconPlus size={20} />}
+                  >
+                    Reset & Start New Thread
+                  </Button>
+                </Stack>
+              </form>
+            </Card>
+
+            {/* Preview */}
+            <Card withBorder p="xl" radius="lg" style={{ flex: 1 }}>
+              <Stack gap="md">
               <Group gap="sm">
                 <IconEye size={20} />
                 <Text fw={600}>Tweet Preview</Text>
@@ -333,9 +569,10 @@ export function StartThreadPage() {
                   automatically reply to this thread.
                 </Text>
               </Alert>
-            </Stack>
-          </Card>
-        </Group>
+              </Stack>
+            </Card>
+          </Group>
+        )}
 
         {/* Example tweets */}
         <Card withBorder p="lg" radius="lg">
