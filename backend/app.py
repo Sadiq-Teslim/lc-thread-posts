@@ -590,10 +590,19 @@ def server_error(e):
 
 
 # Serve frontend static files (for combined deployment)
+# IMPORTANT: This must be last so API routes are matched first
 if os.path.exists(FRONTEND_DIST_PATH):
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_frontend(path):
+        # Don't serve frontend for API routes
+        if path.startswith("api/"):
+            return jsonify({
+                "success": False,
+                "error_code": "NOT_FOUND",
+                "message": "The requested API resource was not found.",
+            }), 404
+        
         if path != "" and os.path.exists(os.path.join(FRONTEND_DIST_PATH, path)):
             return send_from_directory(FRONTEND_DIST_PATH, path)
         else:

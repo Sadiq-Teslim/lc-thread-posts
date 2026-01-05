@@ -2,7 +2,15 @@ import axios, { AxiosError } from "axios";
 import { useSessionStore } from "../store/sessionStore";
 
 // Get API URL from environment variable or use relative path
-const API_URL = (import.meta.env?.VITE_API_URL as string | undefined) || "/api";
+// If VITE_API_URL is set, use it (should include /api if needed)
+// Otherwise, default to relative /api path
+let API_URL = (import.meta.env?.VITE_API_URL as string | undefined) || "/api";
+
+// Ensure API_URL ends with /api if it's a full URL
+if (API_URL.startsWith("http") && !API_URL.endsWith("/api")) {
+  // If it's a full URL without /api, add it
+  API_URL = API_URL.endsWith("/") ? `${API_URL}api` : `${API_URL}/api`;
+}
 
 // Create axios instance
 const api = axios.create({

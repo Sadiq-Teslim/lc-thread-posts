@@ -20,6 +20,8 @@ import {
   CopyButton,
   ActionIcon,
   Tooltip,
+  Textarea,
+  Modal,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
@@ -35,6 +37,7 @@ import {
   IconLock,
   IconEye,
   IconEyeOff,
+  IconFileImport,
 } from "@tabler/icons-react";
 import { useSessionStore } from "../store/sessionStore";
 import {
@@ -50,6 +53,8 @@ export function SettingsPage() {
     useSessionStore();
   const [loading, setLoading] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  const [envModalOpened, setEnvModalOpened] = useState(false);
+  const [envContent, setEnvContent] = useState("");
 
   const form = useForm<CredentialsPayload>({
     initialValues: {
@@ -124,6 +129,110 @@ export function SettingsPage() {
         message: getErrorMessage(error),
       });
     }
+  };
+
+  const handlePasteEnv = () => {
+    if (!envContent.trim()) {
+      toast.error({
+        title: "Empty Content",
+        message: "Please paste your .env file content.",
+      });
+      return;
+    }
+
+    // Parse .env file content
+    const lines = envContent.split("\n");
+    const envVars: Record<string, string> = {};
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Skip empty lines and comments
+      if (!trimmed || trimmed.startsWith("#")) continue;
+
+      // Parse KEY=VALUE format
+      const match = trimmed.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let value = match[2].trim();
+
+        // Remove quotes if present
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1);
+        }
+
+        envVars[key] = value;
+      }
+    }
+
+    // Map environment variables to form fields
+    // Support various naming conventions
+    const mapping: Record<string, keyof CredentialsPayload> = {
+      // Standard Twitter API naming
+      TWITTER_API_KEY: "api_key",
+      TWITTER_API_SECRET: "api_secret",
+      TWITTER_ACCESS_TOKEN: "access_token",
+      TWITTER_ACCESS_TOKEN_SECRET: "access_token_secret",
+      TWITTER_BEARER_TOKEN: "bearer_token",
+      // Alternative naming
+      API_KEY: "api_key",
+      API_SECRET: "api_secret",
+      ACCESS_TOKEN: "access_token",
+      ACCESS_TOKEN_SECRET: "access_token_secret",
+      BEARER_TOKEN: "bearer_token",
+      // With CONSUMER prefix
+      TWITTER_CONSUMER_KEY: "api_key",
+      TWITTER_CONSUMER_SECRET: "api_secret",
+      CONSUMER_KEY: "api_key",
+      CONSUMER_SECRET: "api_secret",
+    };
+
+    let foundCount = 0;
+    const updates: Partial<CredentialsPayload> = {};
+
+    for (const [envKey, formKey] of Object.entries(mapping)) {
+      // Try exact match first
+      if (envVars[envKey]) {
+        updates[formKey] = envVars[envKey];
+        foundCount++;
+        continue;
+      }
+
+      // Try case-insensitive match
+      const envKeyUpper = envKey.toUpperCase();
+      for (const [key, value] of Object.entries(envVars)) {
+        if (key.toUpperCase() === envKeyUpper) {
+          updates[formKey] = value;
+          foundCount++;
+          break;
+        }
+      }
+    }
+
+    if (foundCount === 0) {
+      toast.error({
+        title: "No Keys Found",
+        message:
+          "Could not find any matching API keys. Make sure your .env file contains keys like TWITTER_API_KEY, TWITTER_API_SECRET, etc.",
+      });
+      return;
+    }
+
+    // Update form with found values
+    form.setValues({
+      ...form.values,
+      ...updates,
+    });
+
+    setEnvModalOpened(false);
+    setEnvContent("");
+
+    toast.success({
+      title: "Keys Imported",
+      message: `Successfully imported ${foundCount} API key(s). Please review and connect.`,
+    });
   };
 
   const isConnected = hasValidSession();
@@ -222,16 +331,26 @@ export function SettingsPage() {
 
                 <Divider />
 
-                <Text size="sm" c="dimmed">
-                  Enter your X/Twitter Developer API credentials. You can find
-                  these in your{" "}
-                  <Anchor
-                    href="https://developer.twitter.com/en/portal/dashboard"
-                    target="_blank"
+                <Group justify="space-between" align="center">
+                  <Text size="sm" c="dimmed">
+                    Enter your X/Twitter Developer API credentials. You can find
+                    these in your{" "}
+                    <Anchor
+                      href="https://developer.twitter.com/en/portal/dashboard"
+                      target="_blank"
+                    >
+                      Twitter Developer Portal <IconExternalLink size={12} />
+                    </Anchor>
+                  </Text>
+                  <Button
+                    variant="light"
+                    size="xs"
+                    leftSection={<IconFileImport size={14} />}
+                    onClick={() => setEnvModalOpened(true)}
                   >
-                    Twitter Developer Portal <IconExternalLink size={12} />
-                  </Anchor>
-                </Text>
+                    Import from .env
+                  </Button>
+                </Group>
 
                 {showKeys ? (
                   <>
@@ -324,6 +443,51 @@ export function SettingsPage() {
             </form>
           </Card>
         )}
+
+        {/* Env Import Modal */}
+        <Modal
+          opened={envModalOpened}
+          onClose={() => {
+            setEnvModalOpened(false);
+            setEnvContent("");
+          }}
+          title="Import from .env File"
+          size="lg"
+        >
+          <Stack gap="md">
+            <Text size="sm" c="dimmed">
+              Paste the contents of your .env file below. The system will
+              automatically extract and map the API keys to the correct fields.
+            </Text>
+
+            <Textarea
+              placeholder={`TWITTER_API_KEY=your_key_here
+TWITTER_API_SECRET=your_secret_here
+TWITTER_ACCESS_TOKEN=your_token_here
+TWITTER_ACCESS_TOKEN_SECRET=your_token_secret_here
+TWITTER_BEARER_TOKEN=your_bearer_token_here`}
+              minRows={8}
+              value={envContent}
+              onChange={(e) => setEnvContent(e.target.value)}
+              autosize
+            />
+
+            <Group justify="flex-end">
+              <Button
+                variant="subtle"
+                onClick={() => {
+                  setEnvModalOpened(false);
+                  setEnvContent("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handlePasteEnv} leftSection={<IconFileImport size={16} />}>
+                Import Keys
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
 
         {/* Help Section */}
         <Card withBorder p="lg" radius="lg">
