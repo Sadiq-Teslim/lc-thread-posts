@@ -1,0 +1,17 @@
+name: Keep Alive Ping
+
+on:
+  schedule:
+    # Runs every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        run: |
+          curl -f -X GET https://threadcraft-api.onrender.com/api/health || exit 1
+        timeout-minutes: 1
+
