@@ -4,4 +4,4 @@ tweepy==4.14.0
 python-dotenv==1.0.0
 cryptography==41.0.7
 gunicorn==21.2.0
-supabase==2.3.4
+supabase==2.9.1

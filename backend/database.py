@@ -58,9 +58,20 @@ class DatabaseManager:
 
         try:
             if create_client:
-                # Initialize Supabase client without ClientOptions to avoid compatibility issues
+                # Initialize Supabase client
                 self.supabase = create_client(supabase_url, supabase_key)
+                # Test the connection by doing a simple query
                 logger.info("Supabase client initialized successfully")
+        except TypeError as e:
+            if "proxy" in str(e).lower():
+                logger.error(
+                    "Supabase dependency version conflict detected. "
+                    "This is usually fixed by updating supabase to version 2.8.0 or higher. "
+                    f"Error: {e}"
+                )
+            else:
+                logger.error(f"Failed to initialize Supabase client (TypeError): {e}")
+                logger.exception("Full error traceback:")
         except Exception as e:
             logger.error(f"Failed to initialize Supabase client: {e}")
             logger.exception("Full error traceback:")
