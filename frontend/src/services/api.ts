@@ -115,7 +115,6 @@ export interface CredentialsPayload {
 export interface SessionResponse {
   success: boolean;
   session_id: string;
-  expires_in: number;
   message: string;
 }
 

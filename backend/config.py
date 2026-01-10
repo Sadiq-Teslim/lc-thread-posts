@@ -34,6 +34,14 @@ class Config:
     PROGRESS_FILE: Path = BASE_DIR / "progress.json"
     FRONTEND_DIST_PATH: Path = BASE_DIR / "frontend" / "dist"
 
+    # Supabase Configuration
+    SUPABASE_URL: Optional[str] = os.environ.get("SUPABASE_URL")
+    SUPABASE_KEY: Optional[str] = os.environ.get("SUPABASE_KEY")
+    # Salt for hashing user identifiers - CHANGE THIS IN PRODUCTION!
+    DATABASE_SALT: str = os.environ.get(
+        "DATABASE_SALT", "threadcraft-default-salt-change-in-production"
+    )
+
     # Logging Configuration
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO").upper()
 

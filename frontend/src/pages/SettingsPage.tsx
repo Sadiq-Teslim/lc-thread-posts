@@ -49,7 +49,7 @@ import { toast } from "../utils/toast";
 import classes from "./SettingsPage.module.css";
 
 export function SettingsPage() {
-  const { hasValidSession, setSession, clearSession, expiresAt } =
+  const { hasValidSession, setSession, clearSession } =
     useSessionStore();
   const [loading, setLoading] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
@@ -85,10 +85,7 @@ export function SettingsPage() {
       const response = await apiService.createSession(values);
 
       if (response.success && response.session_id) {
-        const expiresAt = new Date(
-          Date.now() + (response.expires_in || 86400) * 1000
-        ).toISOString();
-        setSession(response.session_id, expiresAt);
+        setSession(response.session_id);
 
         toast.success({
           title: "Connected Successfully",
@@ -277,9 +274,9 @@ export function SettingsPage() {
               >
                 {isConnected ? "Connected" : "Not Connected"}
               </Badge>
-              {isConnected && expiresAt && (
+              {isConnected && (
                 <Text size="xs" c="dimmed" mt="xs">
-                  Session expires: {new Date(expiresAt).toLocaleString()}
+                  Your credentials are saved securely
                 </Text>
               )}
             </Box>
@@ -855,15 +852,14 @@ TWITTER_BEARER_TOKEN=your_bearer_token_here`}
                     encryption
                   </List.Item>
                   <List.Item>
-                    Keys are stored only in your browser's session, not on any
-                    server
+                    Credentials are encrypted and stored securely in the database
                   </List.Item>
                   <List.Item>
-                    Sessions automatically expire after 24 hours for security
+                    Your credentials persist until you click "Disconnect"
                   </List.Item>
                   <List.Item>
                     You can disconnect at any time to remove all stored
-                    credentials
+                    credentials and data
                   </List.Item>
                   <List.Item>
                     The app communicates directly with X/Twitter's official API

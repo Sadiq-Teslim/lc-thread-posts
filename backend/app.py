@@ -21,7 +21,6 @@ from config import Config
 from constants import (
     MAX_TWEET_LENGTH,
     REQUIRED_CREDENTIAL_FIELDS,
-    SESSION_EXPIRY_HOURS,
     MAX_REPLIES_TO_FETCH,
 )
 from errors import friendly_error_message
@@ -229,8 +228,7 @@ def create_session() -> Tuple[Dict[str, Any], int]:
                 {
                     "success": True,
                     "session_id": session_id,
-                    "message": "Successfully connected to X/Twitter! You can now start posting.",
-                    "expires_in": SESSION_EXPIRY_HOURS * 3600,  # Convert hours to seconds
+                    "message": "Successfully connected to X/Twitter! Your credentials are saved securely. You can now start posting.",
                 }
             ),
             200,
@@ -273,10 +271,10 @@ def validate_session() -> Tuple[Dict[str, Any], int]:
                 {
                     "success": False,
                     "valid": False,
-                    "message": "Your session has expired. Please reconfigure your API keys.",
+                    "message": "No active session found. Please configure your API keys.",
                 }
             ),
-            200,  # Not an error, just expired session
+            200,  # Not an error, just no session
         )
 
     return (
@@ -284,8 +282,7 @@ def validate_session() -> Tuple[Dict[str, Any], int]:
             {
                 "success": True,
                 "valid": True,
-                "expires_at": session["expires_at"].isoformat(),
-                "message": "Session is active.",
+                "message": "Session is active. Your credentials are saved.",
             }
         ),
         200,
@@ -313,7 +310,7 @@ def destroy_session() -> Tuple[Dict[str, Any], int]:
         jsonify(
             {
                 "success": True,
-                "message": "Session ended. Your credentials have been securely removed.",
+                "message": "Disconnected successfully. All your credentials and data have been removed from the database.",
             }
         ),
         200,
@@ -332,7 +329,8 @@ def get_progress() -> Tuple[Dict[str, Any], int]:
         JSON response with progress data.
     """
     try:
-        progress = progress_manager.load()
+        session_id = get_session_id()
+        progress = progress_manager.load(session_id)
         return (
             jsonify(
                 {
@@ -368,7 +366,8 @@ def reset_progress() -> Tuple[Dict[str, Any], int]:
         JSON response confirming progress reset.
     """
     try:
-        progress_manager.reset()
+        session_id = get_session_id()
+        progress_manager.reset(session_id)
         return (
             jsonify(
                 {
@@ -435,7 +434,8 @@ def start_thread() -> Tuple[Dict[str, Any], int]:
         response = client.create_tweet(text=intro_text, reply_settings="mentionedUsers")
 
         thread_id = str(response.data["id"])
-        progress_manager.save(0, thread_id)
+        session_id = get_session_id()
+        progress_manager.save(0, thread_id, session_id)
 
         logger.info(f"Thread started: {thread_id}")
 
@@ -600,7 +600,8 @@ def continue_thread() -> Tuple[Dict[str, Any], int]:
             # Continue with day 0 if we can't fetch replies
 
         # Save the thread ID and current day
-        progress_manager.save(day, thread_id)
+        session_id = get_session_id()
+        progress_manager.save(day, thread_id, session_id)
         logger.info(f"Thread continued: {thread_id}, day={day}")
 
         return (
@@ -674,7 +675,8 @@ def post_solution() -> Tuple[Dict[str, Any], int]:
         )
 
     # Load progress
-    progress = progress_manager.load()
+    session_id = get_session_id()
+    progress = progress_manager.load(session_id)
     thread_id = progress.get("thread_id")
 
     if not thread_id:
@@ -712,7 +714,7 @@ def post_solution() -> Tuple[Dict[str, Any], int]:
         response = client.create_tweet(text=tweet_text, in_reply_to_tweet_id=thread_id)
 
         tweet_id = str(response.data["id"])
-        progress_manager.save(day, thread_id)
+        progress_manager.save(day, thread_id, session_id)
 
         logger.info(f"Solution posted: day={day}, tweet_id={tweet_id}, thread={thread_id}")
 
@@ -758,7 +760,8 @@ def preview_tweet() -> Tuple[Dict[str, Any], int]:
     gist_url = data.get("gist_url", "").strip()
     problem_name = data.get("problem_name", "").strip()
 
-    progress = progress_manager.load()
+    session_id = get_session_id()
+    progress = progress_manager.load(session_id)
     day = progress.get("day", 0) + 1
 
     tweet_text = f"Day {day}\n\n{problem_name}\n\n{gist_url}"
