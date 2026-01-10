@@ -18,13 +18,11 @@ logger = logging.getLogger(__name__)
 # Try importing Supabase (may not be available)
 try:
     from supabase import create_client, Client
-    from supabase.lib.client_options import ClientOptions
     SUPABASE_AVAILABLE = True
 except ImportError:
     SUPABASE_AVAILABLE = False
     Client = None  # type: ignore
     create_client = None  # type: ignore
-    ClientOptions = None  # type: ignore
 
 
 class DatabaseManager:
@@ -59,15 +57,13 @@ class DatabaseManager:
             return
 
         try:
-            if create_client and ClientOptions:
-                self.supabase = create_client(
-                    supabase_url,
-                    supabase_key,
-                    options=ClientOptions(auto_refresh_token=True, persist_session=False),
-                )
+            if create_client:
+                # Initialize Supabase client without ClientOptions to avoid compatibility issues
+                self.supabase = create_client(supabase_url, supabase_key)
                 logger.info("Supabase client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Supabase client: {e}")
+            logger.exception("Full error traceback:")
             # Don't raise - allow fallback to file storage
 
     def _hash_user_identifier(self, session_id: str) -> str:
