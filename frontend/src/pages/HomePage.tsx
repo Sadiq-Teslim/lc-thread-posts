@@ -14,6 +14,8 @@ import {
   Box,
   Skeleton,
   Alert,
+  Modal,
+  NumberInput,
 } from "@mantine/core";
 import {
   IconSend,
@@ -25,6 +27,7 @@ import {
   IconAlertCircle,
   IconRefresh,
 } from "@tabler/icons-react";
+import { useDisclosure } from "@mantine/hooks";
 import { useSessionStore } from "../store/sessionStore";
 import { useProgressStore } from "../store/progressStore";
 import { apiService, getErrorMessage } from "../services/api";
@@ -39,6 +42,9 @@ export function HomePage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adjustDay, setAdjustDay] = useState<number | "">("");
+  const [adjustOpened, { open: openAdjustModal, close: closeAdjustModal }] =
+    useDisclosure(false);
 
   const fetchProgress = async () => {
     if (!hasValidSession()) return;
@@ -76,6 +82,51 @@ export function HomePage() {
     } catch (err) {
       toast.error({
         title: "Reset Failed",
+        message: getErrorMessage(err),
+      });
+    }
+  };
+
+  const handleOpenAdjustModal = () => {
+    setAdjustDay(currentDay);
+    openAdjustModal();
+  };
+
+  const handleUpdateDay = async () => {
+    if (adjustDay === "" || Number.isNaN(adjustDay)) {
+      toast.error({
+        title: "Invalid Day",
+        message: "Please enter a valid day number.",
+      });
+      return;
+    }
+
+    if (adjustDay < 0) {
+      toast.error({
+        title: "Invalid Day",
+        message: "Day number must be 0 or greater.",
+      });
+      return;
+    }
+
+    try {
+      const response = await apiService.updateProgress(adjustDay);
+      if (response.success && response.data) {
+        setProgress(response.data);
+        toast.success({
+          title: "Progress Updated",
+          message: `Current day set to ${response.data.current_day}.`,
+        });
+        closeAdjustModal();
+      } else {
+        toast.error({
+          title: "Update Failed",
+          message: response.message || "Unable to update progress.",
+        });
+      }
+    } catch (err) {
+      toast.error({
+        title: "Update Failed",
         message: getErrorMessage(err),
       });
     }
@@ -311,6 +362,51 @@ export function HomePage() {
                 </Box>
               </Group>
             </Card>
+
+            <Card
+              withBorder
+              p="xl"
+              radius="lg"
+              className={classes.actionCard}
+              onClick={() => {
+                if (hasActiveThread) {
+                  handleOpenAdjustModal();
+                } else {
+                  toast.info({
+                    title: "No Active Thread",
+                    message: "Start or continue a thread before adjusting days.",
+                  });
+                }
+              }}
+              style={{
+                cursor: hasActiveThread ? "pointer" : "not-allowed",
+                opacity: hasActiveThread ? 1 : 0.7,
+              }}
+            >
+              <Group>
+                <ThemeIcon
+                  size={50}
+                  radius="md"
+                  variant="gradient"
+                  gradient={{ from: "orange", to: "red" }}
+                >
+                  <IconCalendar size={26} />
+                </ThemeIcon>
+                <Box>
+                  <Text fw={600} size="lg">
+                    Adjust Current Day
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    Sync your day if you posted manually
+                  </Text>
+                </Box>
+              </Group>
+              {!hasActiveThread && (
+                <Badge mt="md" variant="light" color="gray">
+                  Requires active thread
+                </Badge>
+              )}
+            </Card>
           </SimpleGrid>
         </Box>
 
@@ -335,6 +431,44 @@ export function HomePage() {
           </Card>
         )}
       </Stack>
+
+      <Modal
+        opened={adjustOpened}
+        onClose={closeAdjustModal}
+        title="Adjust Current Day"
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Use this if you posted outside the app and need to sync your current
+            day.
+          </Text>
+          <NumberInput
+            label="Current Day"
+            description="Set this to the latest day you've already posted"
+            min={0}
+            value={adjustDay}
+            onChange={(value) => {
+              if (value === "" || value === null) {
+                setAdjustDay("");
+                return;
+              }
+              if (typeof value === "number") {
+                setAdjustDay(value);
+                return;
+              }
+              const parsed = Number(value);
+              setAdjustDay(Number.isNaN(parsed) ? "" : parsed);
+            }}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="subtle" onClick={closeAdjustModal}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateDay}>Update Day</Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 }

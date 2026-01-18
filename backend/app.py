@@ -100,7 +100,9 @@ def require_credentials(f: Callable) -> Callable:
 
         session = session_manager.get_session(session_id)
         if not session:
-            logger.warning(f"Invalid or expired session: {session_id[:8] if session_id else 'None'}...")
+            logger.warning(
+                f"Invalid or expired session: {session_id[:8] if session_id else 'None'}..."
+            )
             return (
                 jsonify(
                     {
@@ -115,7 +117,9 @@ def require_credentials(f: Callable) -> Callable:
         try:
             credentials = session_manager.get_credentials(session_id)
             if not credentials:
-                logger.error(f"Failed to decrypt credentials for session: {session_id[:8]}...")
+                logger.error(
+                    f"Failed to decrypt credentials for session: {session_id[:8]}..."
+                )
                 return (
                     jsonify(
                         {
@@ -261,7 +265,7 @@ def validate_session() -> Tuple[Dict[str, Any], int]:
                     "message": "No active session found. Please configure your API keys.",
                 }
             ),
-            200,  
+            200,
         )
 
     session = session_manager.get_session(session_id)
@@ -379,6 +383,92 @@ def reset_progress() -> Tuple[Dict[str, Any], int]:
         )
     except Exception as e:
         logger.error(f"Failed to reset progress: {e}")
+        error_code, message = friendly_error_message(e)
+        return (
+            jsonify({"success": False, "error_code": error_code, "message": message}),
+            500,
+        )
+
+
+@app.route("/api/progress/update", methods=["POST"])
+@require_credentials
+def update_progress() -> Tuple[Dict[str, Any], int]:
+    """
+    Update the current progress day for an existing thread.
+
+    Allows users to manually adjust their progress when they post outside the app.
+
+    Request Body:
+        - current_day: Integer day number (e.g., 18)
+
+    Returns:
+        JSON response with updated progress data.
+    """
+    data = request.get_json() or {}
+    raw_day = data.get("current_day")
+
+    try:
+        day = int(raw_day)
+    except (TypeError, ValueError):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "INVALID_DAY",
+                    "message": "Please provide a valid day number.",
+                }
+            ),
+            400,
+        )
+
+    if day < 0:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error_code": "INVALID_DAY",
+                    "message": "Day number must be 0 or greater.",
+                }
+            ),
+            400,
+        )
+
+    try:
+        session_id = get_session_id()
+        progress = progress_manager.load(session_id)
+        thread_id = progress.get("thread_id")
+
+        if not thread_id:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error_code": "NO_THREAD",
+                        "message": "No active thread found to update.",
+                    }
+                ),
+                400,
+            )
+
+        progress_manager.save(day, thread_id, session_id)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"Progress updated to Day {day}.",
+                    "data": {
+                        "current_day": day,
+                        "thread_id": thread_id,
+                        "has_active_thread": True,
+                        "next_day": day + 1,
+                    },
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Failed to update progress: {e}")
         error_code, message = friendly_error_message(e)
         return (
             jsonify({"success": False, "error_code": error_code, "message": message}),
@@ -533,7 +623,12 @@ def continue_thread() -> Tuple[Dict[str, Any], int]:
         try:
             tweet = client.get_tweet(
                 id=thread_id,
-                tweet_fields=["author_id", "created_at", "public_metrics", "in_reply_to_user_id"],
+                tweet_fields=[
+                    "author_id",
+                    "created_at",
+                    "public_metrics",
+                    "in_reply_to_user_id",
+                ],
             )
         except Exception as e:
             error_str = str(e).lower()
@@ -716,7 +811,9 @@ def post_solution() -> Tuple[Dict[str, Any], int]:
         tweet_id = str(response.data["id"])
         progress_manager.save(day, thread_id, session_id)
 
-        logger.info(f"Solution posted: day={day}, tweet_id={tweet_id}, thread={thread_id}")
+        logger.info(
+            f"Solution posted: day={day}, tweet_id={tweet_id}, thread={thread_id}"
+        )
 
         return (
             jsonify(
@@ -879,6 +976,7 @@ def server_error(e) -> Tuple[Dict[str, Any], int]:
 # ============== STATIC FILE SERVING ==============
 
 if Config.FRONTEND_DIST_PATH.exists():
+
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_frontend(path: str):

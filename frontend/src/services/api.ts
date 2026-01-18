@@ -239,6 +239,24 @@ export const apiService = {
   },
 
   /**
+   * Update current progress day for an active thread.
+   *
+   * @param currentDay - Current day number to set
+   * @returns Promise resolving to updated progress data
+   */
+  async updateProgress(
+    currentDay: number
+  ): Promise<ApiResponse<ProgressData>> {
+    const response = await api.post<ApiResponse<ProgressData>>(
+      "/progress/update",
+      {
+        current_day: currentDay,
+      }
+    );
+    return response.data;
+  },
+
+  /**
    * Start a new thread with an introduction tweet.
    *
    * @param introText - Introduction text for the thread (max 280 characters)
