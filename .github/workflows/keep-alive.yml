@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ping Backend Health Endpoint
         run: |
-          curl -f -X GET https://threadcraft-api.onrender.com/api/health || exit 1
+          curl -f -X GET https://threadcraft-api-2.onrender.com/api/health || exit 1
         timeout-minutes: 1
 
 
